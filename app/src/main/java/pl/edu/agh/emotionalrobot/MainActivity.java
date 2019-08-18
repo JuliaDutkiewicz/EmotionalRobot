@@ -1,57 +1,103 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.annotation.SuppressLint;
+import android.content.res.AssetFileDescriptor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
-import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
+import org.tensorflow.lite.Interpreter;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
 
 public class MainActivity extends AppCompatActivity {
-
-    static {
-        System.loadLibrary("tensorflow_inference");
-    }
-
-    private static final String MODEL_FILE = "file:///android_asset/optimized_tfdroid.pb";
-    private static final String INPUT_NODE = "I";
-    private static final String OUTPUT_NODE = "O";
-
-    private static final long[] INPUT_SIZE = {1, 3};
-    private TensorFlowInferenceInterface inferenceInterface;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         final Button button = (Button) findViewById(R.id.button2);
-        final EditText num1 = (EditText) findViewById(R.id.num1);
-        final EditText num2 = (EditText) findViewById(R.id.num2);
-        final EditText num3 = (EditText) findViewById(R.id.num3);
-
         button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
-                    float[] inputFloats = {Float.parseFloat(num1.getText().toString()),
-                            Float.parseFloat(num2.getText().toString()),
-                            Float.parseFloat(num3.getText().toString())};
-                    inferenceInterface.feed(INPUT_NODE, inputFloats, INPUT_SIZE);
-                    inferenceInterface.run(new String[]{OUTPUT_NODE});
+                                      @SuppressLint("SetTextI18n")
+                                      @Override
+                                      public void onClick(View v) {
+                                          try {
+                                              Bitmap bmp = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                                                      R.drawable.happy_face);
+                                              Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
+                                              Interpreter interpreter = new Interpreter(loadModelFile());
+                                              float[][][][] input = new float[1][64][64][1];
+                                              float[][] output = new float[1][7];
+//                                              Random r = new Random();
+                                              for (int i = 0; i < 64; i++)
+                                                  for (int j = 0; j < 64; j++) {
+                                                      int pixel = scaledBitmap.getPixel(i, j);
+                                                      int r = Color.red(pixel);
+                                                      int g = Color.green(pixel);
+                                                      int b = Color.blue(pixel);
+                                                      float gray = (float) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+                                                      gray = (float) (gray / 255.0);
+                                                      gray = (float) (gray - 0.5);
+                                                      gray = (float) (gray * 2.0);
+                                                      input[0][j][i][0] = gray;
+                                                  }
+                                              interpreter.run(input, output);
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView);
+                                              textViewR.setText("angry " + Float.toString(output[0][0])
+                                                      + "\ndisgust " + Float.toString(output[0][1])
+                                                      + "\nfear " + Float.toString(output[0][2])
+                                                      + "\nhappy " + Float.toString(output[0][3])
+                                                      + "\nsad " + Float.toString(output[0][4])
+                                                      + "\nsuprise " + Float.toString(output[0][5])
+                                                      + "\nneutral " + Float.toString(output[0][6]));
+                                          } catch (Exception e) {
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView);
+                                              textViewR.setText(e.getMessage());
+                                          }
+                                      }
+                                  }
 
-                    float[] result = {0, 0};
-                    inferenceInterface.fetch(OUTPUT_NODE, result);
-                    final TextView textViewR = (TextView) findViewById(R.id.textView);
-                    textViewR.setText(Float.toString(result[0]) + ", " + Float.toString(result[1]));
-                } catch (Exception e) {
-                    final TextView textViewR = (TextView) findViewById(R.id.textView);
-                    textViewR.setText(e.getMessage());//Float.toString(result[0]) + ", " + Float.toString(result[1]));
-                }
-            }
-        });
+        );
+
+    }
+
+    private MappedByteBuffer loadModelFile() throws IOException {
+
+        AssetFileDescriptor fileDescriptor = getAssets().openFd("converted_model.tflite");
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    }
+
+    public Bitmap toGrayscale(Bitmap bmpOriginal) {
+        int width, height;
+        height = bmpOriginal.getHeight();
+        width = bmpOriginal.getWidth();
+
+        Bitmap bmpGrayscale = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        Canvas c = new Canvas(bmpGrayscale);
+        Paint paint = new Paint();
+        ColorMatrix cm = new ColorMatrix();
+        cm.setSaturation(0);
+        ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
+        paint.setColorFilter(f);
+        c.drawBitmap(bmpOriginal, 0, 0, paint);
+        return bmpGrayscale;
     }
 }
+
