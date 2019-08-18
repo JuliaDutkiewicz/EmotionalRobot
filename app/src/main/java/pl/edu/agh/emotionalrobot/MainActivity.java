@@ -4,11 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.graphics.Paint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -35,25 +31,10 @@ public class MainActivity extends AppCompatActivity {
                                       @Override
                                       public void onClick(View v) {
                                           try {
-                                              Bitmap bmp = BitmapFactory.decodeResource(getApplicationContext().getResources(),
-                                                      R.drawable.happy_face);
-                                              Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
+
                                               Interpreter interpreter = new Interpreter(loadModelFile());
-                                              float[][][][] input = new float[1][64][64][1];
+                                              float[][][][] input = preproscessImage(R.drawable.happy_face);
                                               float[][] output = new float[1][7];
-//                                              Random r = new Random();
-                                              for (int i = 0; i < 64; i++)
-                                                  for (int j = 0; j < 64; j++) {
-                                                      int pixel = scaledBitmap.getPixel(i, j);
-                                                      int r = Color.red(pixel);
-                                                      int g = Color.green(pixel);
-                                                      int b = Color.blue(pixel);
-                                                      float gray = (float) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-                                                      gray = (float) (gray / 255.0);
-                                                      gray = (float) (gray - 0.5);
-                                                      gray = (float) (gray * 2.0);
-                                                      input[0][j][i][0] = gray;
-                                                  }
                                               interpreter.run(input, output);
                                               final TextView textViewR = (TextView) findViewById(R.id.textView);
                                               textViewR.setText("angry " + Float.toString(output[0][0])
@@ -74,6 +55,27 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private float[][][][] preproscessImage(int picture) {
+        Bitmap bmp = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                picture);
+        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
+        float[][][][] result = new float[1][64][64][1];
+        for (int i = 0; i < 64; i++)
+            for (int j = 0; j < 64; j++) {
+                int pixel = scaledBitmap.getPixel(i, j);
+                int r = Color.red(pixel);
+                int g = Color.green(pixel);
+                int b = Color.blue(pixel);
+                float gray = (float) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+                gray = (float) (gray / 255.0);
+                gray = (float) (gray - 0.5);
+                gray = (float) (gray * 2.0);
+                result[0][j][i][0] = gray;
+            }
+        return result;
+    }
+
+
     private MappedByteBuffer loadModelFile() throws IOException {
 
         AssetFileDescriptor fileDescriptor = getAssets().openFd("converted_model.tflite");
@@ -84,20 +86,5 @@ public class MainActivity extends AppCompatActivity {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
-    public Bitmap toGrayscale(Bitmap bmpOriginal) {
-        int width, height;
-        height = bmpOriginal.getHeight();
-        width = bmpOriginal.getWidth();
-
-        Bitmap bmpGrayscale = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-        Canvas c = new Canvas(bmpGrayscale);
-        Paint paint = new Paint();
-        ColorMatrix cm = new ColorMatrix();
-        cm.setSaturation(0);
-        ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
-        paint.setColorFilter(f);
-        c.drawBitmap(bmpOriginal, 0, 0, paint);
-        return bmpGrayscale;
-    }
 }
 
