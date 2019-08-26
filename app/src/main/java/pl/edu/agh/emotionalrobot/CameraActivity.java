@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -25,14 +26,17 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Size;
+import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +50,10 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.FaceDetector;
 
 public class CameraActivity extends AppCompatActivity {
     private static final String TAG = "Camera Activity";
@@ -91,7 +99,6 @@ public class CameraActivity extends AppCompatActivity {
         getEmotionsButton = (Button) findViewById(R.id.btn_takepicture);
         emotions = (TextView) findViewById(R.id.emotions);
         emotions.setText("DEBUG");
-        Toast.makeText(CameraActivity.this, emotions.toString(), Toast.LENGTH_SHORT).show();
         assert getEmotionsButton != null;
         try {
             interpreter = new Interpreter(this.loadModelFile());
@@ -160,8 +167,8 @@ public class CameraActivity extends AppCompatActivity {
             if (characteristics != null) {
                 jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
             }
-            int width = 640;
-            int height = 480;
+            int width = 480;
+            int height = 640;
             if (jpegSizes != null && 0 < jpegSizes.length) {
                 width = jpegSizes[0].getWidth();
                 height = jpegSizes[0].getHeight();
@@ -174,7 +181,7 @@ public class CameraActivity extends AppCompatActivity {
             captureBuilder.addTarget(reader.getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             // Orientation
-            int rotation = getWindowManager().getDefaultDisplay().getRotation();
+            final int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -185,7 +192,21 @@ public class CameraActivity extends AppCompatActivity {
                     byte[] bytes = new byte[buffer.capacity()];
                     buffer.get(bytes);
                     Bitmap bitmapImage = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
-                    float[][][][] input = preproscessImage(bitmapImage);
+                    Matrix matrix = new Matrix();
+
+                    matrix.postRotate(270);
+
+                    Bitmap rotatedBitmap = Bitmap.createBitmap(bitmapImage, 0, 0, bitmapImage.getWidth(), bitmapImage.getHeight(), matrix, true);
+                    Bitmap face = getFace(rotatedBitmap);
+                    if(face == null){
+                        Toast.makeText(CameraActivity.this, "No face detected", Toast.LENGTH_LONG);
+                        return;
+                    }
+                    ImageView view = (ImageView) findViewById(R.id.imageView3);
+                    view.setImageBitmap(rotatedBitmap);
+
+
+                    float[][][][] input = preproscessImage(face);
 
                     float[][] output = new float[1][7];
                     interpreter.run(input, output);
@@ -196,6 +217,29 @@ public class CameraActivity extends AppCompatActivity {
                     }
 
 
+                }
+
+                private Bitmap getFace(Bitmap bmp) {
+                    FaceDetector faceDetector = new
+                            FaceDetector.Builder(getApplicationContext()).setTrackingEnabled(false)
+                            .build();
+                    if (!faceDetector.isOperational()) {
+                        new AlertDialog.Builder(getApplicationContext()).setMessage("Could not set up the face detector!").show();
+                        return null;
+                    }
+                    Frame frame = new Frame.Builder().setBitmap(bmp).build();
+                    SparseArray<Face> faces = faceDetector.detect(frame);
+                    if (faces.size() == 0){
+                        return null;
+                    }
+//                    Toast.makeText(CameraActivity.this, Integer.toString(faces.size()), Toast.LENGTH_SHORT).show();
+                    Face face = faces.valueAt(0);
+                    float x1 = face.getPosition().x;
+                    float y1 = face.getPosition().y;
+                    float width = face.getWidth();
+                    float height = face.getHeight();
+                    Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int) x1, (int) y1, (int) width, (int) height);
+                    return bmp;
                 }
 
                 private float[][][][] preproscessImage(Bitmap bmp) {
@@ -221,7 +265,7 @@ public class CameraActivity extends AppCompatActivity {
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
-                    Toast.makeText(CameraActivity.this, "Got emotions", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(CameraActivity.this, "Got emotions", Toast.LENGTH_SHORT).show();
                     createCameraPreview();
                 }
             };
@@ -253,6 +297,7 @@ public class CameraActivity extends AppCompatActivity {
                 + "\nsuprise " + Float.toString(output[0][5])
                 + "\nneutral " + Float.toString(output[0][6]));
     }
+
 
     protected void createCameraPreview() {
         try {

@@ -6,11 +6,18 @@ import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.FaceDetector;
 
 import org.tensorflow.lite.Interpreter;
 
@@ -28,14 +35,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         final Button button = (Button) findViewById(R.id.button2);
         final Button goToCamera = (Button) findViewById(R.id.button);
+
         button.setOnClickListener(new View.OnClickListener() {
                                       @SuppressLint("SetTextI18n")
                                       @Override
                                       public void onClick(View v) {
                                           try {
-
                                               Interpreter interpreter = new Interpreter(loadModelFile());
-                                              float[][][][] input = preproscessImage(R.drawable.happy_face);
+                                              Bitmap bmp = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                                                      R.drawable.happy_human);
+                                              float[][][][] input = preproscessImage(getFace(bmp));
                                               float[][] output = new float[1][7];
                                               interpreter.run(input, output);
                                               final TextView textViewR = (TextView) findViewById(R.id.textView);
@@ -63,14 +72,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void openCameraActivity(){
+    private void openCameraActivity() {
         Intent intent = new Intent(this, CameraActivity.class);
         startActivity(intent);
     }
 
-    private float[][][][] preproscessImage(int picture) {
-        Bitmap bmp = BitmapFactory.decodeResource(getApplicationContext().getResources(),
-                picture);
+    private float[][][][] preproscessImage(Bitmap bmp) {
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
         float[][][][] result = new float[1][64][64][1];
         for (int i = 0; i < 64; i++)
@@ -99,5 +106,25 @@ public class MainActivity extends AppCompatActivity {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
+    private Bitmap getFace(Bitmap bmp) {
+        FaceDetector faceDetector = new
+                FaceDetector.Builder(getApplicationContext()).setTrackingEnabled(false)
+                .build();
+        if (!faceDetector.isOperational()) {
+            new AlertDialog.Builder(getApplicationContext()).setMessage("Could not set up the face detector!").show();
+            return null;
+        }
+        Frame frame = new Frame.Builder().setBitmap(bmp).build();
+        SparseArray<Face> faces = faceDetector.detect(frame);
+
+        Toast.makeText(MainActivity.this, Integer.toString(faces.size()), Toast.LENGTH_SHORT).show();
+        Face face = faces.valueAt(0);
+        float x1 = face.getPosition().x;
+        float y1 = face.getPosition().y;
+        float width = face.getWidth();
+        float height = face.getHeight();
+        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int)x1,(int)y1, (int)width,(int) height);
+        return tempBitmap;
+    }
 }
 
