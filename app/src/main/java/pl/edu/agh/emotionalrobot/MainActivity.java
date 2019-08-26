@@ -1,6 +1,7 @@
 package pl.edu.agh.emotionalrobot;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         final Button button = (Button) findViewById(R.id.button2);
+        final Button goToCamera = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
                                       @SuppressLint("SetTextI18n")
                                       @Override
@@ -52,7 +54,18 @@ public class MainActivity extends AppCompatActivity {
                                   }
 
         );
+        goToCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openCameraActivity();
+            }
+        });
 
+    }
+
+    private void openCameraActivity(){
+        Intent intent = new Intent(this, CameraActivity.class);
+        startActivity(intent);
     }
 
     private float[][][][] preproscessImage(int picture) {
