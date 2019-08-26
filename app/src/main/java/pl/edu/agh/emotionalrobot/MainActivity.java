@@ -1,5 +1,6 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.content.res.AssetFileDescriptor;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -10,10 +11,13 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
+import org.tensorflow.lite.Interpreter;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,18 +25,12 @@ import java.util.Iterator;
 
 public class MainActivity extends AppCompatActivity {
 
-    static {
-        System.loadLibrary("tensorflow_inference");
-    }
-
     private static final String MODEL_FILE_VIDEO = "file:///android_asset/optimized_tfdroid.pb";
     private static final String MODEL_FILE_AUDIO = "file:///android_asset/optimized_saved_model_v3.pb";
     private static final String INPUT_NODE = "I";
     private static final String OUTPUT_NODE = "O";
 
     private static final long[] INPUT_SIZE = {1, 3};
-    private TensorFlowInferenceInterface inferenceInterface;
-    private TensorFlowInferenceInterface inferenceForAudio;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,21 +73,14 @@ public class MainActivity extends AppCompatActivity {
 //
 //                    textViewR.setText(tokenizer.size());
 
+                    AssetFileDescriptor fileDescriptor = getAssets().openFd("optimized_saved_model_v3.pb");
+                    FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+                    FileChannel fileChannel = inputStream.getChannel();
+                    long startOffset = fileDescriptor.getStartOffset();
+                    long declaredLength = fileDescriptor.getDeclaredLength();
+                    MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+//                    Interpreter interpreter = new Interpreter(buffer);
 
-                    inferenceForAudio = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE_AUDIO);
-
-                    textViewR.setText("retertrertetr");
-                    int[] inputChars = {Integer.parseInt(num1.getText().toString()),
-                            Integer.parseInt(num2.getText().toString()),
-                            Integer.parseInt(num3.getText().toString())};
-                    inferenceForAudio.feed("input_1", inputChars, INPUT_SIZE);
-                    inferenceForAudio.run(new String[]{OUTPUT_NODE});
-
-
-
-                    float[] outputChar = {0};
-                    inferenceForAudio.fetch("output_node0", outputChar);
-                    textViewR.setText(Arrays.toString(outputChar));
 
                 } catch (Exception e) {
                     final TextView errorTextR = (TextView) findViewById(R.id.errorText);
