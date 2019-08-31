@@ -51,8 +51,8 @@ public class SpeechHelper {
     private static final String LOG_TAG = SpeechHelper.class.getSimpleName();
 
     // Working variables.
-    short[] recordingBuffer = new short[RECORDING_LENGTH];
-    int recordingOffset = 0;
+    private short[] recordingBuffer = new short[RECORDING_LENGTH];
+    private int recordingOffset = 0;
     boolean shouldContinue = true;
     private Thread recordingThread;
     boolean shouldContinueRecognition = true;

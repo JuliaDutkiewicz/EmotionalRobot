@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         final Button button = (Button) findViewById(R.id.button2);
         final Button audioButton = (Button) findViewById(R.id.button);
+        final Button stopAudioRecordingButton = (Button) findViewById(R.id.button3);
         button.setOnClickListener(new View.OnClickListener() {
                                       @SuppressLint("SetTextI18n")
                                       @Override
@@ -69,9 +70,26 @@ public class MainActivity extends AppCompatActivity {
 
                                               Log.v(LOG_TAG, "Start audio");
                                               Interpreter audioInterpreter = new Interpreter(loadModelFile(AUDIO_MODEL));
-                                              final TextView textViewR = (TextView) findViewById(R.id.textView2);
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView);
                                               speechHelper = new SpeechHelper(audioInterpreter);
                                               requestMicrophonePermission();
+                                          } catch (Exception e) {
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView);
+                                              textViewR.setText(e.getMessage());
+                                          }
+                                      }
+                                  }
+
+        );
+        stopAudioRecordingButton.setOnClickListener(new View.OnClickListener() {
+                                      @SuppressLint("SetTextI18n")
+                                      @Override
+                                      public void onClick(View v) {
+                                          try {
+
+                                              Log.v(LOG_TAG, "Stop audio");
+                                              speechHelper.shouldContinue = false;
+                                              speechHelper.shouldContinueRecognition = false;
                                           } catch (Exception e) {
                                               final TextView textViewR = (TextView) findViewById(R.id.textView);
                                               textViewR.setText(e.getMessage());
