@@ -1,12 +1,15 @@
 package pl.edu.agh.emotionalrobot;
 
 import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -21,18 +24,24 @@ import java.nio.channels.FileChannel;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String AUDIO_MODEL = "audio_converted_model.tflite";
+    private static final String LOG_TAG = MainActivity.class.getSimpleName();
+    private static final int REQUEST_RECORD_AUDIO = 13;
+    private SpeechHelper speechHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         final Button button = (Button) findViewById(R.id.button2);
+        final Button audioButton = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
                                       @SuppressLint("SetTextI18n")
                                       @Override
                                       public void onClick(View v) {
                                           try {
-
-                                              Interpreter interpreter = new Interpreter(loadModelFile());
+                                              Log.v(LOG_TAG, "Start video");
+                                              Interpreter interpreter = new Interpreter(loadModelFile("converted_model.tflite"));
                                               float[][][][] input = preproscessImage(R.drawable.happy_face);
                                               float[][] output = new float[1][7];
                                               interpreter.run(input, output);
@@ -52,7 +61,44 @@ public class MainActivity extends AppCompatActivity {
                                   }
 
         );
+        audioButton.setOnClickListener(new View.OnClickListener() {
+                                      @SuppressLint("SetTextI18n")
+                                      @Override
+                                      public void onClick(View v) {
+                                          try {
 
+                                              Log.v(LOG_TAG, "Start audio");
+                                              Interpreter audioInterpreter = new Interpreter(loadModelFile(AUDIO_MODEL));
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView2);
+                                              speechHelper = new SpeechHelper(audioInterpreter);
+                                              requestMicrophonePermission();
+                                          } catch (Exception e) {
+                                              final TextView textViewR = (TextView) findViewById(R.id.textView);
+                                              textViewR.setText(e.getMessage());
+                                          }
+                                      }
+                                  }
+
+        );
+
+    }
+
+    private void requestMicrophonePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+        }
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQUEST_RECORD_AUDIO
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+            speechHelper.startRecording();
+            speechHelper.startRecognition();
+        }
     }
 
     private float[][][][] preproscessImage(int picture) {
@@ -76,9 +122,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private MappedByteBuffer loadModelFile() throws IOException {
-
-        AssetFileDescriptor fileDescriptor = getAssets().openFd("converted_model.tflite");
+    private MappedByteBuffer loadModelFile(String fileName) throws IOException {
+        AssetFileDescriptor fileDescriptor = getAssets().openFd(fileName);
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = fileDescriptor.getStartOffset();
