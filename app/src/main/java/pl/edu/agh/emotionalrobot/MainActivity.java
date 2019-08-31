@@ -1,57 +1,42 @@
 package pl.edu.agh.emotionalrobot;
 
-import android.support.v7.app.AppCompatActivity;
+
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.Toast;
 
-import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
+import java.util.Collections;
+
+import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public class MainActivity extends AppCompatActivity {
 
-    static {
-        System.loadLibrary("tensorflow_inference");
-    }
-
-    private static final String MODEL_FILE = "file:///android_asset/optimized_tfdroid.pb";
-    private static final String INPUT_NODE = "I";
-    private static final String OUTPUT_NODE = "O";
-
-    private static final long[] INPUT_SIZE = {1, 3};
-    private TensorFlowInferenceInterface inferenceInterface;
+    EmotionDataGatherer emotionDataGatherer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        emotionDataGatherer = new EmotionDataGatherer(Collections.<EmotionRecognizer>emptyList());
 
-        final Button button = (Button) findViewById(R.id.button2);
-        final EditText num1 = (EditText) findViewById(R.id.num1);
-        final EditText num2 = (EditText) findViewById(R.id.num2);
-        final EditText num3 = (EditText) findViewById(R.id.num3);
-
+        Button button = (Button) findViewById(R.id.button);
+        final EditText intervalText = (EditText) findViewById(R.id.interval);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    inferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILE);
-                    float[] inputFloats = {Float.parseFloat(num1.getText().toString()),
-                            Float.parseFloat(num2.getText().toString()),
-                            Float.parseFloat(num3.getText().toString())};
-                    inferenceInterface.feed(INPUT_NODE, inputFloats, INPUT_SIZE);
-                    inferenceInterface.run(new String[]{OUTPUT_NODE});
-
-                    float[] result = {0, 0};
-                    inferenceInterface.fetch(OUTPUT_NODE, result);
-                    final TextView textViewR = (TextView) findViewById(R.id.textView);
-                    textViewR.setText(Float.toString(result[0]) + ", " + Float.toString(result[1]));
+                    int interval = Integer.getInteger(intervalText.getText().toString());
+                    UpdateSender.Options options = new UpdateSender.Options(interval);
+                    UpdateSender updateSender = new UpdateSender(options);
+                    //TODO put an animation on top of everything
+                    emotionDataGatherer.startGatheringEmotions(updateSender);
                 } catch (Exception e) {
-                    final TextView textViewR = (TextView) findViewById(R.id.textView);
-                    textViewR.setText(e.getMessage());//Float.toString(result[0]) + ", " + Float.toString(result[1]));
+                    Toast.makeText(getApplicationContext(), "Fill the interval", Toast.LENGTH_SHORT);
                 }
             }
         });
+
     }
 }
