@@ -1,3 +1,3 @@
 # EmotionalRobot
 
-Based on https://omid.al/posts/2017-02-20-Tutorial-Build-Your-First-Tensorflow-Android-App/.
+Implementation of Camera Activity is based on https://inducesmile.com/android/android-camera2-api-example-tutorial/.
