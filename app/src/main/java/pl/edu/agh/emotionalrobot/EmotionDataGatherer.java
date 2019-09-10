@@ -1,11 +1,7 @@
 package pl.edu.agh.emotionalrobot;
 
-import android.util.Log;
-
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -29,10 +25,9 @@ public class EmotionDataGatherer {
         timer.scheduleAtFixedRate(new TimerTask() {
             public void run() {
                 try {
-                    Map<String, Float> emotionData = new HashMap<>();
-                    emotionData.put("sad :(", (float) 2.0);
-                    emotionData.put("happy ^-^", (float) 0.2); // <==example data, should actually read each emotionRecognizer in turn
-                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), emotionData);
+                    for (EmotionRecognizer recognizer : emotionRecognizers) {
+                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions());
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
