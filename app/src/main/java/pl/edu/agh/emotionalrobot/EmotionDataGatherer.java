@@ -1,5 +1,7 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.util.Log;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
