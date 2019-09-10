@@ -21,19 +21,21 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         emotionDataGatherer = new EmotionDataGatherer(Collections.<EmotionRecognizer>emptyList());
 
+        setContentView(R.layout.activity_main);
         Button button = (Button) findViewById(R.id.button);
         final EditText intervalText = (EditText) findViewById(R.id.interval);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    int interval = Integer.getInteger(intervalText.getText().toString());
-                    UpdateSender.Options options = new UpdateSender.Options(interval);
-                    UpdateSender updateSender = new UpdateSender(options);
+                    int interval = Integer.valueOf(intervalText.getText().toString());
+                    EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(interval);
+                    UpdateSender updateSender = new UpdateSender(getApplicationContext());
                     //TODO put an animation on top of everything
-                    emotionDataGatherer.startGatheringEmotions(updateSender);
+                    emotionDataGatherer.startGatheringEmotions(updateSender, options);
                 } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "Fill the interval", Toast.LENGTH_SHORT);
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), "Fill the interval. "+e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
         });
