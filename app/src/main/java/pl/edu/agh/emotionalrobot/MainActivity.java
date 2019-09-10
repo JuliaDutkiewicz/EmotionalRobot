@@ -1,28 +1,48 @@
 package pl.edu.agh.emotionalrobot;
 
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import java.util.Collections;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.VideoEmotionRecognizer;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_CAMERA_PERMISSION = 200;
+
     EmotionDataGatherer emotionDataGatherer;
+    VideoEmotionRecognizer videoEmotionRecognizer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        emotionDataGatherer = new EmotionDataGatherer(Collections.<EmotionRecognizer>emptyList());
-
-        Button button = (Button) findViewById(R.id.button);
+        setContentView(R.layout.activity_main);
+        final Button button = (Button) findViewById(R.id.button);
         final EditText intervalText = (EditText) findViewById(R.id.interval);
+
+        final List<EmotionRecognizer> emotionRecognizers = new LinkedList<>();
+        try {
+            videoEmotionRecognizer = initializeVideoEmotionRecognizer();
+        } catch (IOException e) {
+            Toast.makeText(this, "Couldn't initialize Video EmotionRecogizer", Toast.LENGTH_SHORT);
+            e.printStackTrace();
+        }
+        emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -33,66 +53,30 @@ public class MainActivity extends AppCompatActivity {
                     //TODO put an animation on top of everything
                     emotionDataGatherer.startGatheringEmotions(updateSender);
                 } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "Fill the interval", Toast.LENGTH_SHORT);
+                    Toast.makeText(getApplicationContext(), "Fill the interval", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
     }
 
-    private void openCameraActivity() {
-        Intent intent = new Intent(this, CameraActivity.class);
-        startActivity(intent);
+    private VideoEmotionRecognizer initializeVideoEmotionRecognizer() throws IOException {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        final int rotation = getWindowManager().getDefaultDisplay().getRotation();
+        VideoEmotionRecognizer recognizer = new VideoEmotionRecognizer(getApplicationContext(), rotation, manager, this);
+        return recognizer;
+
     }
 
-    private float[][][][] preproscessImage(Bitmap bmp) {
-        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
-        float[][][][] result = new float[1][64][64][1];
-        for (int i = 0; i < 64; i++)
-            for (int j = 0; j < 64; j++) {
-                int pixel = scaledBitmap.getPixel(i, j);
-                int r = Color.red(pixel);
-                int g = Color.green(pixel);
-                int b = Color.blue(pixel);
-                float gray = (float) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-                gray = (float) (gray / 255.0);
-                gray = (float) (gray - 0.5);
-                gray = (float) (gray * 2.0);
-                result[0][j][i][0] = gray;
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                // close the app
+                Toast.makeText(MainActivity.this, "Sorry!!!, you can't use this app without granting permission", Toast.LENGTH_LONG).show();
+                finish();
             }
-        return result;
-    }
-
-
-    private MappedByteBuffer loadModelFile() throws IOException {
-
-        AssetFileDescriptor fileDescriptor = getAssets().openFd("converted_model.tflite");
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-
-    private Bitmap getFace(Bitmap bmp) {
-        FaceDetector faceDetector = new
-                FaceDetector.Builder(getApplicationContext()).setTrackingEnabled(false)
-                .build();
-        if (!faceDetector.isOperational()) {
-            new AlertDialog.Builder(getApplicationContext()).setMessage("Could not set up the face detector!").show();
-            return null;
         }
-        Frame frame = new Frame.Builder().setBitmap(bmp).build();
-        SparseArray<Face> faces = faceDetector.detect(frame);
-
-        Toast.makeText(MainActivity.this, Integer.toString(faces.size()), Toast.LENGTH_SHORT).show();
-        Face face = faces.valueAt(0);
-        float x1 = face.getPosition().x;
-        float y1 = face.getPosition().y;
-        float width = face.getWidth();
-        float height = face.getHeight();
-        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int)x1,(int)y1, (int)width,(int) height);
-        return tempBitmap;
     }
 }
 
