@@ -1,16 +1,5 @@
 package pl.edu.agh.emotionalrobot.recognizers;
 
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.FEMALE_ANGRY;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.FEMALE_CALM;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.FEMALE_FEARFUL;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.FEMALE_HAPPY;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.FEMALE_SAD;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.MALE_ANGRY;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.MALE_CALM;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.MALE_FEARFUL;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.MALE_HAPPY;
-import static pl.edu.agh.emotionalrobot.recognizers.AudioUtils.MALE_SAD;
-
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -19,17 +8,26 @@ import android.util.Log;
 import org.tensorflow.lite.Interpreter;
 
 import java.nio.MappedByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class AudioEmotionRecognizer implements EmotionRecognizer {
 
-    private static final int SAMPLE_RATE = 16000;
-    private static final int RECORDING_LENGTH = 1296;
-    // lower cannot work -> minimal buffer length for sample rate 16000 is 1280
+    //
+    private static final int SAMPLE_RATE = 44100;
+    private static final int RECORDING_LENGTH = 44280;
+    // minimal buffer length for sample rate 16000 Hz is 1280 => 1296
+    // minimal buffer length for sample rate 44100 Hz is 3584 => 3672 - this configuration is recommended
+    // because 44100 Hz was the sample rate for training the current neural network
+
+    // neural network size
     private static final int INPUT_BUFFER_SIZE = 216;
+    private static final int OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
+
     // cannot be greater because of neural network input size
+    private static final int REPEATS_TIMES = (int) RECORDING_LENGTH / INPUT_BUFFER_SIZE;
 
     private static final String LOG_TAG = AudioEmotionRecognizer.class.getSimpleName();
 
@@ -39,9 +37,11 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
     private short[] audioBuffer;
     private AudioRecord audioRecord;
     private Interpreter interpreter;
+    private final ArrayList<String> outputNames;
 
-    public AudioEmotionRecognizer(MappedByteBuffer modelFile) {
+    public AudioEmotionRecognizer(MappedByteBuffer modelFile, ArrayList<String> outputNames) {
         this.interpreter = new Interpreter(modelFile);
+        this.outputNames = outputNames;
         initAudioRecord();
     }
 
@@ -98,7 +98,6 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
 
     private Map<String, Float> recognize() {
         short[] inputBuffer = new short[RECORDING_LENGTH];
-        float[] floatInputBuffer = new float[INPUT_BUFFER_SIZE];
 
         recordingBufferLock.lock();
         try {
@@ -111,39 +110,43 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
             recordingBufferLock.unlock();
         }
 
-        // We need to feed in float values between -1.0f and 1.0f, so divide the
-        // signed 16-bit inputs.
-        for (int i = 0; i < INPUT_BUFFER_SIZE; i++) {
-            floatInputBuffer[i] = inputBuffer[i] / 32767.0f;
+        float[][] outputFull = new float[1][OUTPUT_BUFFER_SIZE];
+        for (int j = 0; j < OUTPUT_BUFFER_SIZE; j++){
+            outputFull[0][j] += 0;
         }
 
-        // Run the model.
-        float[][] output = new float[1][10];
-        interpreter.run(floatInputBuffer, output);
-        HashMap<String, Float> results = new HashMap<>();
-        results.put(FEMALE_ANGRY, output[0][0]);
-        results.put(FEMALE_CALM, output[0][1]);
-        results.put(FEMALE_FEARFUL, output[0][2]);
-        results.put(FEMALE_HAPPY, output[0][3]);
-        results.put(FEMALE_SAD, output[0][4]);
-        results.put(MALE_ANGRY, output[0][5]);
-        results.put(MALE_CALM, output[0][6]);
-        results.put(MALE_FEARFUL, output[0][7]);
-        results.put(MALE_HAPPY, output[0][8]);
-        results.put(MALE_SAD, output[0][9]);
-
-        Log.v(LOG_TAG, FEMALE_ANGRY + " " + output[0][0]
-                + "\n" + FEMALE_CALM + " " + output[0][1]
-                + "\n" + FEMALE_FEARFUL + " " + output[0][2]
-                + "\n" + FEMALE_HAPPY + " " + output[0][3]
-                + "\n" + FEMALE_SAD + " " + output[0][4]
-                + "\n" + MALE_ANGRY + " " + output[0][5]
-                + "\n" + MALE_CALM + " " + output[0][6]
-                + "\n" + MALE_FEARFUL + " " + output[0][7]
-                + "\n" + MALE_HAPPY + " " + output[0][8]
-                + "\n" + MALE_SAD + " " + output[0][9]
-        );
+        for (int k = 0; k < REPEATS_TIMES; k++) {
+            float[] floatInputBuffer = preProcessing(inputBuffer, k);
+            float[][] output = new float[1][OUTPUT_BUFFER_SIZE];
+            interpreter.run(floatInputBuffer, output);
+            for (int j = 0; j < OUTPUT_BUFFER_SIZE; j++){
+                outputFull[0][j] += output[0][j];
+            }
+        }
+        for (int j = 0; j < OUTPUT_BUFFER_SIZE; j++){
+            outputFull[0][j] /= REPEATS_TIMES;
+        }
         audioRecord.stop();
+        return postProcessing(outputFull[0]);
+    }
+
+    // process recorded audio to buffer required by neural network
+    private float[] preProcessing(short[] inputBuffer, int k) {
+        float[] floatInputBuffer = new float[INPUT_BUFFER_SIZE];
+        for (int i = 0; i < INPUT_BUFFER_SIZE; i++) {
+            floatInputBuffer[i] = inputBuffer[(i + (k * INPUT_BUFFER_SIZE)) % RECORDING_LENGTH];
+        }
+        return floatInputBuffer;
+    }
+
+    private HashMap<String, Float> postProcessing(float[] floats) {
+        HashMap<String, Float> results = new HashMap<>();
+        StringBuilder resultsText = new StringBuilder("Results: \n");
+        for (int i = 0; i < OUTPUT_BUFFER_SIZE; i++) {
+            results.put(this.outputNames.get(i), floats[i]);
+            resultsText.append(outputNames.get(i)).append(": ").append(floats[i]).append("\n");
+        }
+        Log.v(LOG_TAG, resultsText.toString());
         return results;
     }
 }

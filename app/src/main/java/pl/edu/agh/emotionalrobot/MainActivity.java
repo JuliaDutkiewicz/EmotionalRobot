@@ -9,10 +9,16 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
@@ -21,6 +27,7 @@ import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 public class MainActivity extends AppCompatActivity {
 
     private static final String AUDIO_MODEL = "audio_converted_model.tflite";
+    private static final String AUDIO_MODEL_OUTPUTS = "audio_output.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     EmotionDataGatherer emotionDataGatherer;
@@ -34,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<EmotionRecognizer> emotionRecognizers = new ArrayList<>();
         try {
-            AudioEmotionRecognizer audioEmotionRecognizer = new AudioEmotionRecognizer(loadModelFile(AUDIO_MODEL));
+            AudioEmotionRecognizer audioEmotionRecognizer = new AudioEmotionRecognizer(loadModelFile(AUDIO_MODEL), getOutputNames(AUDIO_MODEL_OUTPUTS));
             emotionRecognizers.add(audioEmotionRecognizer);
         } catch (IOException e) {
             Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
@@ -66,6 +73,38 @@ public class MainActivity extends AppCompatActivity {
         long startOffset = fileDescriptor.getStartOffset();
         long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    }
+
+    private String loadJSONFromAsset(String fileName) {
+        String json = null;
+        try {
+            InputStream is = getAssets().open(fileName);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return json;
+    }
+
+    private ArrayList<String> getOutputNames(String fileName) {
+        ArrayList<String> outputNames = new ArrayList<>();
+        try {
+            JSONObject obj = new JSONObject(loadJSONFromAsset(fileName));
+            JSONArray names = obj.getJSONArray("names");
+
+            for (int i = 0; i < names.length(); i++) {
+                String name = names.getString(i);
+                outputNames.add(name);
+            }
+        } catch (JSONException e) {
+            Log.v(LOG_TAG, "Error while reading json");
+        }
+        return outputNames;
     }
 
 }
