@@ -9,7 +9,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,8 +25,8 @@ import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String AUDIO_MODEL = "audio_converted_model.tflite";
-    private static final String AUDIO_MODEL_OUTPUTS = "audio_output.json";
+    private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
+    private static final String AUDIO_CONFIG_FILE = "audio.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     EmotionDataGatherer emotionDataGatherer;
@@ -41,7 +40,9 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<EmotionRecognizer> emotionRecognizers = new ArrayList<>();
         try {
-            AudioEmotionRecognizer audioEmotionRecognizer = new AudioEmotionRecognizer(loadModelFile(AUDIO_MODEL), getOutputNames(AUDIO_MODEL_OUTPUTS));
+            String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
+            String audioModelName = getAudioModelName(configJson);
+            AudioEmotionRecognizer audioEmotionRecognizer = new AudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
             emotionRecognizers.add(audioEmotionRecognizer);
         } catch (IOException e) {
             Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
@@ -91,20 +92,14 @@ public class MainActivity extends AppCompatActivity {
         return json;
     }
 
-    private ArrayList<String> getOutputNames(String fileName) {
-        ArrayList<String> outputNames = new ArrayList<>();
+    private String getAudioModelName(String jsonData) {
         try {
-            JSONObject obj = new JSONObject(loadJSONFromAsset(fileName));
-            JSONArray names = obj.getJSONArray("names");
-
-            for (int i = 0; i < names.length(); i++) {
-                String name = names.getString(i);
-                outputNames.add(name);
-            }
+            JSONObject obj = new JSONObject(jsonData);
+            return obj.getString("DEFAULT_AUDIO_MODEL_NAME");
         } catch (JSONException e) {
-            Log.v(LOG_TAG, "Error while reading json");
+            Log.v(LOG_TAG, "Error while reading json, DEFAULT_AUDIO_MODEL_NAME name set to default value");
         }
-        return outputNames;
+        return DEFAULT_AUDIO_MODEL_NAME;
     }
 
 }
