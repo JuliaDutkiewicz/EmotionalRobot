@@ -1,7 +1,11 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.app.Service;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.os.Binder;
+import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -19,37 +23,16 @@ import java.util.ArrayList;
 import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
-public class EmotionService {
+public class EmotionService extends Service {
     private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
     private static final String AUDIO_CONFIG_FILE = "audio.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final int DEFAULT_INTERVAL = 5000;
     private ArrayList<EmotionRecognizer> emotionRecognizers;
 
-    private final Context context;
-
     private EmotionDataGatherer emotionDataGatherer;
 
-    public EmotionService(Context context) {
-        this.context = context;
-    }
-
-    public void start() {
-        this.emotionRecognizers = new ArrayList<>();
-        loadAudioRecognizerFromConfig();
-
-        emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
-        try {
-            int interval = DEFAULT_INTERVAL;
-            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(interval);
-            UpdateSender updateSender = new UpdateSender(context);
-            //TODO put an animation on top of everything
-            emotionDataGatherer.startGatheringEmotions(updateSender, options);
-        } catch (Exception e) {
-            Log.v(LOG_TAG, e.getMessage());
-            Toast.makeText(context, "Error while emotion gathering.", Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
-        }
+    public EmotionService() {
     }
 
     private void loadAudioRecognizerFromConfig() {
@@ -64,7 +47,7 @@ public class EmotionService {
     }
 
     private MappedByteBuffer loadModelFile(String fileName) throws IOException {
-        AssetFileDescriptor fileDescriptor = context.getAssets().openFd(fileName);
+        AssetFileDescriptor fileDescriptor = getApplicationContext().getAssets().openFd(fileName);
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = fileDescriptor.getStartOffset();
@@ -75,7 +58,7 @@ public class EmotionService {
     private String loadJSONFromAsset(String fileName) {
         String json = null;
         try {
-            InputStream is = context.getAssets().open(fileName);
+            InputStream is = getApplicationContext().getAssets().open(fileName);
             int size = is.available();
             byte[] buffer = new byte[size];
             is.read(buffer);
@@ -97,4 +80,33 @@ public class EmotionService {
         }
         return DEFAULT_AUDIO_MODEL_NAME;
     }
+
+
+    private final IBinder mBinder = new Binder();
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        this.emotionRecognizers = new ArrayList<>();
+        loadAudioRecognizerFromConfig();
+
+        emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
+        try {
+            int interval = DEFAULT_INTERVAL;
+            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(interval);
+            UpdateSender updateSender = new UpdateSender(getApplicationContext());
+            //TODO put an animation on top of everything
+            emotionDataGatherer.startGatheringEmotions(updateSender, options);
+        } catch (Exception e) {
+            Log.v(LOG_TAG, e.getMessage());
+            Toast.makeText(getApplicationContext(), "Error while emotion gathering.", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+        return Service.START_NOT_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
+
 }
