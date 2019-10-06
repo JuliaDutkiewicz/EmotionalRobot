@@ -101,7 +101,7 @@ public class EmotionService extends Service {
             Toast.makeText(getApplicationContext(), "Error while emotion gathering.", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
-        return Service.START_NOT_STICKY;
+        return Service.START_STICKY;
     }
 
     @Override
