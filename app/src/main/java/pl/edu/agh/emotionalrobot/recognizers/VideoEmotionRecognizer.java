@@ -1,7 +1,6 @@
 package pl.edu.agh.emotionalrobot.recognizers;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
@@ -31,7 +30,6 @@ import android.util.Log;
 import android.util.Size;
 import android.util.SparseArray;
 import android.view.Surface;
-import android.widget.Toast;
 
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
@@ -54,15 +52,12 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
 
     private static final String TAG = "VideoEmotionRecognizer";
 
-    private static final int REQUEST_CAMERA_PERMISSION = 200;
-
     private final int screenRotation;
     private final Object semaphore = new Object();
     private CaptureRequest.Builder captureRequestBuilder;
     private CameraCaptureSession cameraCaptureSessions;
     private FaceDetector faceDetector;
     private ImageReader reader;
-    private Activity mainActivity;
     private CameraDevice cameraDevice;
     private Size imageDimension;
     private HandlerThread mBackgroundThread;
@@ -70,6 +65,8 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
     private CameraManager cameraManager;
     private Bitmap currentImage;
     private Context applicationContext;
+    private Interpreter interpreter;
+    private String cameraId;
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice camera) {
@@ -86,17 +83,19 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         public void onError(CameraDevice camera, int error) {
             cameraDevice.close();
             cameraDevice = null;
+            try {
+                openCamera(cameraManager);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     };
-    private Interpreter interpreter;
-    private String cameraId;
 
 
-    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager, Activity mainActivity) throws IOException {
+    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager) throws Exception {
         this.applicationContext = context;
         this.screenRotation = screenRotation;
         this.cameraManager = cameraManager;
-        this.mainActivity = mainActivity;
         this.interpreter = new Interpreter(this.loadModelFile());
         this.faceDetector = new
                 FaceDetector.Builder(applicationContext).setTrackingEnabled(false)
@@ -107,7 +106,7 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
 
-    private void openCamera(CameraManager manager) {
+    private void openCamera(CameraManager manager) throws Exception {
 
         try {
             for (String camera : manager.getCameraIdList()) {
@@ -123,12 +122,10 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             assert map != null;
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
-            // Add permission for camera and let user grant the permission
-            if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(mainActivity, new String[]{
-                        Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
-                return;
+            // Check  permission for camera
+            if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "VideoEmotionRecognizer needs permissions to use camera");
+                throw new Exception("VideoEmotionRecognizer needs permissions to use camera");
             }
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
@@ -166,6 +163,7 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         Bitmap face = getFace(rotatedImage);
         if (face == null) {
             emotions.put("no_face", (float) 1.0);
+            return emotions;
         }
         float[][][][] input = preproscessImage(face);
         float[][] output = new float[1][7];
@@ -178,7 +176,7 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         emotions.put("sad", output[0][4]);
         emotions.put("suprise", output[0][5]);
         emotions.put("neutral", output[0][6]);
-
+        Log.i("VideoEmotionRecognizer", emotions.toString());
         return emotions;
     }
 
@@ -199,7 +197,8 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         float y1 = face.getPosition().y;
         float width = face.getWidth();
         float height = face.getHeight();
-        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int) x1, (int) y1, (int) width, (int) height);
+        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
+                bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
         return tempBitmap;
     }
 
@@ -333,9 +332,9 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
 
                 @Override
                 public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    Toast.makeText(applicationContext, "Configuration change", Toast.LENGTH_SHORT).show();
+                   Log.i(TAG, "Configuration change");
                 }
-            }, null);
+            }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -348,6 +347,7 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         try {
             cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, null);
+            Log.d(TAG,"DEBUG1");
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }

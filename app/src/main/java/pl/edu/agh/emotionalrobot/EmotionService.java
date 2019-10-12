@@ -4,9 +4,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.hardware.camera2.CameraManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.VideoEmotionRecognizer;
 
 public class EmotionService extends Service {
     private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
@@ -55,6 +58,13 @@ public class EmotionService extends Service {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
+    private void initializeVideoEmotionRecognizer() throws Exception {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        final int rotation = window.getDefaultDisplay().getRotation();
+        VideoEmotionRecognizer recognizer = new VideoEmotionRecognizer(getApplicationContext(), rotation, manager);
+        emotionRecognizers.add(recognizer);
+    }
     private String loadJSONFromAsset(String fileName) {
         String json = null;
         try {
@@ -88,6 +98,11 @@ public class EmotionService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.emotionRecognizers = new ArrayList<>();
         loadAudioRecognizerFromConfig();
+        try {
+            initializeVideoEmotionRecognizer();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         try {
