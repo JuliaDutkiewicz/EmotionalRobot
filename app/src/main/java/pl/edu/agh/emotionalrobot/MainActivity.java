@@ -1,5 +1,6 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.content.Intent;
 
 import android.content.Context;
 import android.hardware.camera2.CameraManager;
@@ -23,6 +24,13 @@ public class MainActivity extends AppCompatActivity {
 
     EmotionDataGatherer emotionDataGatherer;
     VideoEmotionRecognizer videoEmotionRecognizer;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Intent intent = new Intent(getApplicationContext(), EmotionService.class);
+        getApplicationContext().startService(intent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,5 +71,6 @@ public class MainActivity extends AppCompatActivity {
         return recognizer;
 
     }
+
 }
 

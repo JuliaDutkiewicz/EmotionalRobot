@@ -1,0 +1,19 @@
+{
+  "names": [
+    "female_angry",
+    "female_calm",
+    "female_fearful",
+    "female_happy",
+    "female_sad",
+    "male_angry",
+    "male_calm",
+    "male_fearful",
+    "male_happy",
+    "male_sad"
+  ],
+  "AUDIO_MODEL": "audio_model.tflite",
+  "SAMPLE_RATE": 44100,
+  "RECORDING_LENGTH": 44280,
+  "INPUT_BUFFER_SIZE": 216,
+  "OUTPUT_BUFFER_SIZE": 10
+}
