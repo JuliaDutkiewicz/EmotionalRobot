@@ -3,7 +3,6 @@ package pl.edu.agh.emotionalrobot.recognizers;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -21,7 +20,6 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -36,19 +34,17 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.tensorflow.lite.Interpreter;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -91,12 +87,14 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
             cameraDevice = null;
         }
     };
+    private LinkedList<String> emotionNames;
 
-    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager) throws Exception {
+    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
         this.applicationContext = context;
         this.screenRotation = screenRotation;
         this.cameraManager = cameraManager;
-        this.interpreter = new Interpreter(this.loadModelFile());
+        this.interpreter = new Interpreter(model);
+        this.emotionNames = getEmotionNames(config);
         this.faceDetector = new
                 FaceDetector.Builder(applicationContext).setTrackingEnabled(false)
                 .build();
@@ -104,6 +102,22 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    private LinkedList<String> getEmotionNames(String config) {
+        LinkedList<String> emotionNames = new LinkedList<>();
+        try {
+            JSONObject obj = new JSONObject(config);
+            JSONArray names = obj.getJSONArray("emotions");
+
+            for (int i = 0; i < names.length(); i++) {
+                String name = names.getString(i);
+                emotionNames.add(name);
+            }
+        } catch (JSONException e) {
+            Log.v(TAG, "Error while reading json");
+        }
+        return emotionNames;
     }
 
     private void openCamera(CameraManager manager) throws Exception {
@@ -133,15 +147,6 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         }
     }
 
-    private MappedByteBuffer loadModelFile() throws IOException {
-        AssetFileDescriptor fileDescriptor = applicationContext.getAssets().openFd("converted_model.tflite");
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-
     @Override
     public Map<String, Float> getEmotions() {
         Map<String, Float> emotions = new HashMap<>();
@@ -165,37 +170,18 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
             emotions.put("no_face", (float) 1.0);
             return emotions;
         }
-//        try {
-//            savebitmap(face);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+
         float[][][][] input = preproscessImage(face);
         float[][] output = new float[1][7];
         interpreter.run(input, output);
 
-        emotions.put("angry", output[0][0]);
-        emotions.put("disgust", output[0][1]);
-        emotions.put("fear", output[0][2]);
-        emotions.put("happy", output[0][3]);
-        emotions.put("sad", output[0][4]);
-        emotions.put("suprise", output[0][5]);
-        emotions.put("neutral", output[0][6]);
+        for(int i =0; i< emotionNames.size(); i++){
+            emotions.put(emotionNames.get(i), output[0][i]);
+        }
         Log.i("VideoEmotionRecognizer", emotions.toString());
         return emotions;
     }
-//    public static File savebitmap(Bitmap bmp) throws IOException {
-//        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-//        bmp.compress(Bitmap.CompressFormat.JPEG, 60, bytes);
-//        Log.d(TAG,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath());
-//        File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-//                + File.separator + "testimage.jpg");
-//        f.createNewFile();
-//        FileOutputStream fo = new FileOutputStream(f);
-//        fo.write(bytes.toByteArray());
-//        fo.close();
-//        return f;
-//    }
+
 
     private Bitmap getFace(Bitmap bmp) {
         if (!faceDetector.isOperational()) {
