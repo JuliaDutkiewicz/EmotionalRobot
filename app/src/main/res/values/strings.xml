@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EmotionalRobot</string>
+    <string name="get_emotions">Get emotions</string>
 </resources>
