@@ -4,9 +4,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.hardware.camera2.CameraManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -22,27 +24,55 @@ import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.VideoEmotionRecognizer;
 
 public class EmotionService extends Service {
     private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
     private static final String AUDIO_CONFIG_FILE = "audio.json";
+    private static final String DEFAULT_VIDEO_MODEL_NAME = "video_model.tflite";
+    private static final String VIDEO_CONFIG_FILE = "video.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final int DEFAULT_INTERVAL = 5000;
+    private final IBinder mBinder = new Binder();
     private ArrayList<EmotionRecognizer> emotionRecognizers;
-
     private EmotionDataGatherer emotionDataGatherer;
 
     public EmotionService() {
     }
 
-    private void loadAudioRecognizerFromConfig() {
+    private AudioEmotionRecognizer loadAudioRecognizerFromConfig() throws IOException {
+
+        String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
+        String audioModelName = null;
         try {
-            String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
-            String audioModelName = getAudioModelName(configJson);
-            AudioEmotionRecognizer audioEmotionRecognizer = new AudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
-            emotionRecognizers.add(audioEmotionRecognizer);
+            audioModelName = getModelName(configJson, "DEFAULT_AUDIO_MODEL_NAME");
+        } catch (JSONException e) {
+            audioModelName = DEFAULT_AUDIO_MODEL_NAME;
+        }
+        try {
+            return new AudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
         } catch (IOException e) {
             Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
+            throw e;
+        }
+    }
+
+    private VideoEmotionRecognizer loadVideoRecognizerFromConfig() throws Exception {
+        String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
+        String videoModelName = null;
+        try {
+            videoModelName = getModelName(configJson, "DEFAULT_VIDEO_MODEL_NAME");
+        } catch (JSONException e) {
+            videoModelName = DEFAULT_VIDEO_MODEL_NAME;
+        }
+        try {
+            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+            final int rotation = window.getDefaultDisplay().getRotation();
+            return new VideoEmotionRecognizer(getApplicationContext(), rotation, manager, loadModelFile(videoModelName), configJson);
+        } catch (Exception e) {
+            Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
+            throw e;
         }
     }
 
@@ -71,23 +101,30 @@ public class EmotionService extends Service {
         return json;
     }
 
-    private String getAudioModelName(String jsonData) {
+    private String getModelName(String jsonData, String model_key) throws JSONException {
         try {
             JSONObject obj = new JSONObject(jsonData);
             return obj.getString("DEFAULT_AUDIO_MODEL_NAME");
         } catch (JSONException e) {
-            Log.v(LOG_TAG, "Error while reading json, DEFAULT_AUDIO_MODEL_NAME name set to default value");
+            Log.v(LOG_TAG, "Error while reading json, for " + model_key + ".");
+            throw e;
+
         }
-        return DEFAULT_AUDIO_MODEL_NAME;
     }
-
-
-    private final IBinder mBinder = new Binder();
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.emotionRecognizers = new ArrayList<>();
-        loadAudioRecognizerFromConfig();
+        try {
+            emotionRecognizers.add(loadAudioRecognizerFromConfig());
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Couldn't add AudioEmotionRecognizer to EmotionDataGatherer");
+        }
+        try {
+            emotionRecognizers.add(loadVideoRecognizerFromConfig());
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Couldn't add AudioEmotionRecognizer to EmotionDataGatherer");
+        }
 
         emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         try {

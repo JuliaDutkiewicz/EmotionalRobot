@@ -1,0 +1,12 @@
+{
+  "emotions": [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "sad",
+    "suprise",
+    "neutral"
+  ],
+  "AUDIO_MODEL": "video_model.tflite"
+}
