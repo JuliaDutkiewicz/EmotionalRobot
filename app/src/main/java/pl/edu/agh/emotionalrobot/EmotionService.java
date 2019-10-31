@@ -22,7 +22,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.video.AbstractVideoEmotionRecogniser;
 import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
@@ -133,6 +133,7 @@ public class EmotionService extends Service {
             EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(interval);
             UpdateSender updateSender = new UpdateSender(getApplicationContext());
             //TODO put an animation on top of everything
+            Log.v(LOG_TAG, "Starting gatherer process. ");
             emotionDataGatherer.startGatheringEmotions(updateSender, options);
         } catch (Exception e) {
             Log.v(LOG_TAG, e.getMessage());

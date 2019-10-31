@@ -1,4 +1,4 @@
-package pl.edu.agh.emotionalrobot.recognizers;
+package pl.edu.agh.emotionalrobot.recognizers.audio;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -15,6 +15,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+
+import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.utils.MFCC;
 
 public class AudioEmotionRecognizer implements EmotionRecognizer {
 
@@ -157,16 +160,17 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
         } finally {
             recordingBufferLock.unlock();
         }
+        audioRecord.stop();
 
         float[][] outputFull = new float[1][outputBufferSize];
         for (int j = 0; j < outputBufferSize; j++) {
             outputFull[0][j] += 0;
         }
 
-        // cannot be greater because of neural network input size
-        int REPEATS_TIMES = (int) recordingLength / inputBufferSize;
+        float[] mfccInput = preProcessing(inputBuffer);
+        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
         for (int k = 0; k < REPEATS_TIMES; k++) {
-            float[] floatInputBuffer = preProcessing(inputBuffer, k);
+            float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
             float[][] output = new float[1][outputBufferSize];
             interpreter.run(floatInputBuffer, output);
             for (int j = 0; j < outputBufferSize; j++) {
@@ -174,6 +178,7 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
             }
         }
         for (int j = 0; j < outputBufferSize; j++) {
+            System.out.println(outputFull[0][j]);
             outputFull[0][j] /= REPEATS_TIMES;
         }
         audioRecord.stop();
@@ -181,12 +186,21 @@ public class AudioEmotionRecognizer implements EmotionRecognizer {
     }
 
     // process recorded audio to buffer required by neural network
-    private float[] preProcessing(short[] inputBuffer, int k) {
+    private float[] getRequiredSizeFrame(float[] mfccInput, int k) {
         float[] floatInputBuffer = new float[inputBufferSize];
         for (int i = 0; i < inputBufferSize; i++) {
-            floatInputBuffer[i] = inputBuffer[(i + (k * inputBufferSize)) % recordingLength];
+            floatInputBuffer[i] = (float) mfccInput[(i + (k * inputBufferSize)) % mfccInput.length];
         }
         return floatInputBuffer;
+    }
+
+    private float[] preProcessing(short[] inputBuffer) {
+        double[] floatInputBuffer = new double[inputBuffer.length];
+        MFCC mfccConvert = new MFCC();
+        for (int i = 0; i < inputBuffer.length; i++) {
+            floatInputBuffer[i] = (double) (inputBuffer[i] / 1.0);
+        }
+        return mfccConvert.process(floatInputBuffer);
     }
 
     private HashMap<String, Float> postProcessing(float[] floats) {
