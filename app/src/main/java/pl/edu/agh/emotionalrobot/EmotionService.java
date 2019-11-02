@@ -24,6 +24,7 @@ import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.recognizers.audio.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.SpeechAudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.video.AbstractVideoEmotionRecogniser;
 import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
 
@@ -51,7 +52,7 @@ public class EmotionService extends Service {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
         try {
-            return new AudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
+            return new SpeechAudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
         } catch (IOException e) {
             Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
             throw e;
