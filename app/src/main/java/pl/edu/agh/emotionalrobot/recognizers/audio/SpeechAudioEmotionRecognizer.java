@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import pl.edu.agh.emotionalrobot.recognizers.audio.utils.MFCC;
 
-public class SpeechAudioEmotionRecognizer extends AudioEmotionRecognizer{
+public class SpeechAudioEmotionRecognizer extends AudioEmotionRecognizer {
     private static final String LOG_TAG = AudioEmotionRecognizer.class.getSimpleName();
 
     private static final int DEFAULT_SAMPLE_RATE = 44100;
@@ -85,6 +85,25 @@ public class SpeechAudioEmotionRecognizer extends AudioEmotionRecognizer{
         return recognize();
     }
 
+
+    public short[] getRecordedAudioBuffer() {
+        short[] inputBuffer = new short[recordingLength];
+
+        recordingBufferLock.lock();
+        try {
+            int maxLength = recordingBuffer.length;
+            int firstCopyLength = maxLength - recordingOffset;
+            int secondCopyLength = recordingOffset;
+            System.arraycopy(recordingBuffer, recordingOffset, inputBuffer, 0, firstCopyLength);
+            System.arraycopy(recordingBuffer, 0, inputBuffer, firstCopyLength, secondCopyLength);
+        } finally {
+            recordingBufferLock.unlock();
+        }
+        audioRecord.stop();
+        return inputBuffer;
+    }
+
+
     private void record() {
         audioRecord.startRecording();
         int numberRead = audioRecord.read(audioBuffer, 0, audioBuffer.length);
@@ -114,19 +133,7 @@ public class SpeechAudioEmotionRecognizer extends AudioEmotionRecognizer{
     }
 
     private Map<String, Float> recognize() {
-        short[] inputBuffer = new short[recordingLength];
-
-        recordingBufferLock.lock();
-        try {
-            int maxLength = recordingBuffer.length;
-            int firstCopyLength = maxLength - recordingOffset;
-            int secondCopyLength = recordingOffset;
-            System.arraycopy(recordingBuffer, recordingOffset, inputBuffer, 0, firstCopyLength);
-            System.arraycopy(recordingBuffer, 0, inputBuffer, firstCopyLength, secondCopyLength);
-        } finally {
-            recordingBufferLock.unlock();
-        }
-        audioRecord.stop();
+        short[] inputBuffer = getRecordedAudioBuffer();
 
         float[][] outputFull = new float[1][outputBufferSize];
         for (int j = 0; j < outputBufferSize; j++) {
@@ -144,7 +151,6 @@ public class SpeechAudioEmotionRecognizer extends AudioEmotionRecognizer{
             }
         }
         for (int j = 0; j < outputBufferSize; j++) {
-            System.out.println(outputFull[0][j]);
             outputFull[0][j] /= REPEATS_TIMES;
         }
         audioRecord.stop();

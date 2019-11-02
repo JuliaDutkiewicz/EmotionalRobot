@@ -20,6 +20,8 @@ public abstract class AudioEmotionRecognizer implements EmotionRecognizer {
     static final String RECORDING_LENGTH = "RECORDING_LENGTH";
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
+    public abstract short[] getRecordedAudioBuffer();
+
     abstract void initConfigData(String jsonData);
 
     abstract void initAudioRecord();
