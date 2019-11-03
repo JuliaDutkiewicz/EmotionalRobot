@@ -1,0 +1,9 @@
+{
+  "BROKER_IP_OR_NAME": "broker.hivemq.com",
+  "BROKER_PORT": "1883",
+  "BROKER_PROTOCOL": "tcp",
+  "BASE_TOPIC": "emorobo.mqtt.messages",
+  "UPDATE_TOPIC_SUFFIX": ".update",
+  "CONFIGURATION_TOPIC_SUFFIX":".config",
+  "DEFAULT_TICK_LENGTH": 5000
+}

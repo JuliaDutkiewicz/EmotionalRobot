@@ -22,8 +22,10 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.communication.CommunicationConfig;
+import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.audio.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.video.AbstractVideoEmotionRecogniser;
 import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
@@ -34,7 +36,6 @@ public class EmotionService extends Service {
     private static final String DEFAULT_VIDEO_MODEL_NAME = "video_model.tflite";
     private static final String VIDEO_CONFIG_FILE = "video.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
-    private static final int DEFAULT_INTERVAL = 5000;
     private final IBinder mBinder = new Binder();
     private ArrayList<EmotionRecognizer> emotionRecognizers;
     private EmotionDataGatherer emotionDataGatherer;
@@ -110,7 +111,6 @@ public class EmotionService extends Service {
         } catch (JSONException e) {
             Log.v(LOG_TAG, "Error while reading json, for " + model_key + ".");
             throw e;
-
         }
     }
 
@@ -125,14 +125,14 @@ public class EmotionService extends Service {
         try {
             emotionRecognizers.add(loadVideoRecognizerFromConfig());
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Couldn't add AbstractAudioEmotionRecognizer to EmotionDataGatherer");
+            Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
         }
 
         emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         try {
-            int interval = DEFAULT_INTERVAL;
-            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(interval);
-            UpdateSender updateSender = new UpdateSender(getApplicationContext());
+            CommunicationConfig communicationConfig = new CommunicationConfig(loadJSONFromAsset("communication.json"));
+            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
+            UpdateSender updateSender = new UpdateSender(getApplicationContext(), communicationConfig);
             //TODO put an animation on top of everything
             Log.v(LOG_TAG, "Starting gatherer process. ");
             emotionDataGatherer.startGatheringEmotions(updateSender, options);
