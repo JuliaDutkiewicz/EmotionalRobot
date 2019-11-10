@@ -5,7 +5,7 @@ public class MFCC {
 
     // default args
     private Integer samplingRate = 44100;
-    private Integer numberOfMfccsToReturn = 20;
+    private Integer numberOfMfccsToReturn = 25; //not default but this is used by nn creators
     private Integer lengthOfFftWindow = 2048;
 
     private FFT fft = new FFT();
