@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
-import pl.edu.agh.emotionalrobot.recognizers.VideoEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
 
 public class MainActivity extends AppCompatActivity {
 

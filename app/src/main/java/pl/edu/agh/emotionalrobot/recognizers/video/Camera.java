@@ -1,11 +1,10 @@
-package pl.edu.agh.emotionalrobot.recognizers;
+package pl.edu.agh.emotionalrobot.recognizers.video;
 
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
@@ -24,40 +23,23 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.util.Size;
-import android.util.SparseArray;
 import android.view.Surface;
 
-import com.google.android.gms.vision.Frame;
-import com.google.android.gms.vision.face.Face;
-import com.google.android.gms.vision.face.FaceDetector;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.tensorflow.lite.Interpreter;
-
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
-public class VideoEmotionRecognizer implements EmotionRecognizer {
-
-    private static final String TAG = "VideoEmotionRecognizer";
+public class Camera {
+    private static final String TAG = "Camera";
 
     private final int screenRotation;
     private final Object semaphore = new Object();
-    Surface surface;
+    private Surface surface;
     private CaptureRequest.Builder captureRequestBuilder;
     private CameraCaptureSession cameraCaptureSessions;
-    private FaceDetector faceDetector;
     private ImageReader reader;
     private CameraDevice cameraDevice;
     private Size imageDimension;
@@ -66,7 +48,6 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
     private CameraManager cameraManager;
     private Bitmap currentImage;
     private Context applicationContext;
-    private Interpreter interpreter;
     private String cameraId;
     private SurfaceTexture texture;
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
@@ -87,37 +68,54 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
             cameraDevice = null;
         }
     };
-    private LinkedList<String> emotionNames;
 
-    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
+    public Camera(Context context, int screenRotation, CameraManager cameraManager) throws Exception {
         this.applicationContext = context;
         this.screenRotation = screenRotation;
         this.cameraManager = cameraManager;
-        this.interpreter = new Interpreter(model);
-        this.emotionNames = getEmotionNames(config);
-        this.faceDetector = new
-                FaceDetector.Builder(applicationContext).setTrackingEnabled(false)
-                .build();
         openCamera(this.cameraManager);
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
 
-    private LinkedList<String> getEmotionNames(String config) {
-        LinkedList<String> emotionNames = new LinkedList<>();
-        try {
-            JSONObject obj = new JSONObject(config);
-            JSONArray names = obj.getJSONArray("emotions");
-
-            for (int i = 0; i < names.length(); i++) {
-                String name = names.getString(i);
-                emotionNames.add(name);
+    public Bitmap getPicture() {
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                takePicture();
             }
-        } catch (JSONException e) {
-            Log.v(TAG, "Error while reading json");
+        });
+
+        t.start();
+        synchronized (semaphore) {
+            try {
+                semaphore.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-        return emotionNames;
+        Bitmap rotatedImage = rotateBitMap(currentImage);
+        return rotatedImage;
+    }
+
+    private Bitmap rotateBitMap(Bitmap image) {
+        Matrix matrix = new Matrix();
+        switch (screenRotation) {
+            case 0:
+                matrix.postRotate(270);
+                break;
+            case 1:
+                matrix.postRotate(0);
+                break;
+            case 3:
+                matrix.postRotate(180);
+                break;
+            case 4:
+                matrix.postRotate(90);
+                break;
+        }
+        return Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
+
     }
 
     private void openCamera(CameraManager manager) throws Exception {
@@ -145,102 +143,6 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public Map<String, Float> getEmotions() {
-        Map<String, Float> emotions = new HashMap<>();
-        Thread t = new Thread(new Runnable() {
-            public void run() {
-                takePicture();
-            }
-        });
-
-        t.start();
-        synchronized (semaphore) {
-            try {
-                semaphore.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        Bitmap rotatedImage = rotateBitMap(currentImage);
-        Bitmap face = getFace(rotatedImage);
-        if (face == null) {
-            emotions.put("no_face", (float) 1.0);
-            return emotions;
-        }
-
-        float[][][][] input = preproscessImage(face);
-        float[][] output = new float[1][7];
-        interpreter.run(input, output);
-
-        for(int i =0; i< emotionNames.size(); i++){
-            emotions.put(emotionNames.get(i), output[0][i]);
-        }
-        Log.i("VideoEmotionRecognizer", emotions.toString());
-        return emotions;
-    }
-
-
-    private Bitmap getFace(Bitmap bmp) {
-        if (!faceDetector.isOperational()) {
-            new AlertDialog.Builder(applicationContext).setMessage("Could not set up the face detector!").show();
-            return null;
-        }
-
-        Frame frame = new Frame.Builder().setBitmap(bmp).build();
-        SparseArray<Face> faces = faceDetector.detect(frame);
-        if (faces.size() == 0) {
-            Log.e(TAG, "No face recogized");
-            return null;
-        }
-        Face face = faces.valueAt(0);
-        float x1 = face.getPosition().x;
-        float y1 = face.getPosition().y;
-        float width = face.getWidth();
-        float height = face.getHeight();
-        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
-                bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
-        return tempBitmap;
-    }
-
-    private float[][][][] preproscessImage(Bitmap bmp) {
-        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
-        float[][][][] result = new float[1][64][64][1];
-        for (int i = 0; i < 64; i++)
-            for (int j = 0; j < 64; j++) {
-                int pixel = scaledBitmap.getPixel(i, j);
-                int r = Color.red(pixel);
-                int g = Color.green(pixel);
-                int b = Color.blue(pixel);
-                float gray = (float) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-                gray = (float) (gray / 255.0);
-                gray = (float) (gray - 0.5);
-                gray = (float) (gray * 2.0);
-                result[0][j][i][0] = gray;
-            }
-        return result;
-    }
-
-    private Bitmap rotateBitMap(Bitmap image) {
-        Matrix matrix = new Matrix();
-        switch (screenRotation) {
-            case 0:
-                matrix.postRotate(270);
-                break;
-            case 1:
-                matrix.postRotate(0);
-                break;
-            case 3:
-                matrix.postRotate(180);
-                break;
-            case 4:
-                matrix.postRotate(90);
-                break;
-        }
-        return Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
-
     }
 
     private void takePicture() {
@@ -351,10 +253,8 @@ public class VideoEmotionRecognizer implements EmotionRecognizer {
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         try {
             cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, null);
-            Log.d(TAG, "DEBUG1");
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
-
 }
