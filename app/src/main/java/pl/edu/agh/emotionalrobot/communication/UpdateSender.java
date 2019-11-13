@@ -38,9 +38,10 @@ public class UpdateSender {
         return this.initialized;
     }
 
-    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData) {
+    public boolean sendUpdate(final Date timestamp, final byte[] rawData) {
         try {
-            ActionListener callback = new ActionListener(client, formatData(timestamp, emotionData), config.UPDATE_TOPIC);
+            String message = formatRawData(timestamp, rawData);
+            ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
             client.connect(null, callback);
             return true;
         } catch (MqttException | JSONException e) {
@@ -49,7 +50,25 @@ public class UpdateSender {
         }
     }
 
-    private String formatData(Date timestamp, final Map<String, Float> emotionData) throws JSONException {
+    private String formatRawData(Date timestamp, byte[] rawData) throws JSONException {
+        JSONObject update = new JSONObject();
+        update.put("network", "nazwa sieci");
+        return null;
+    }
+
+    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData) {
+        try {
+            String message = formatEmotionData(timestamp, emotionData);
+            ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
+            client.connect(null, callback);
+            return true;
+        } catch (MqttException | JSONException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private String formatEmotionData(Date timestamp, final Map<String, Float> emotionData) throws JSONException {
         JSONObject update = new JSONObject();
         update.put("network", "nazwa sieci");
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
@@ -58,7 +77,6 @@ public class UpdateSender {
         for (String key : emotionData.keySet()) {
             emotionDataObject.put(key, emotionData.get(key));
         }
-        ;
         update.put("emotion-data", emotionDataObject);
         JSONObject outData = new JSONObject();
         outData.put("update", update);

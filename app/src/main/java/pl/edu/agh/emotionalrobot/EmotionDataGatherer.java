@@ -35,6 +35,9 @@ public class EmotionDataGatherer {
                 }
             }
         }, 0, options.interval);
+
+        // to stop timer: apparently .cancel() & ev. .purge()
+        // so if message arrives to ConfigReceiver, some sort of method like "reschedule" should be called
     }
 
     public static class Options {
