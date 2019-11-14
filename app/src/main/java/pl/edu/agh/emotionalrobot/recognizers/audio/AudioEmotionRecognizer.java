@@ -4,6 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
+import android.util.Pair;
 
 import org.tensorflow.lite.Interpreter;
 
@@ -101,7 +102,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    public ByteBuffer getRawData() {
+    public byte[] getRawData() {
         record();
         short[] audioBuffer = getRecordedAudioBuffer();
         ByteBuffer byteAudioBuffer = ByteBuffer.allocate(audioBuffer.length * 2);
@@ -110,7 +111,14 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
             byteAudioBuffer.putShort(i1);
         }
         byteAudioBuffer.order(ByteOrder.BIG_ENDIAN);
-        return byteAudioBuffer;
+        byte[] rawData = new byte[byteAudioBuffer.remaining()];
+        byteAudioBuffer.get(rawData);
+        return rawData;
+    }
+
+    @Override
+    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
+        return null;
     }
 
     public short[] getRecordedAudioBuffer() {
