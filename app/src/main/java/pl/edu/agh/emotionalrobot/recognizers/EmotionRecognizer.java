@@ -1,5 +1,7 @@
 package pl.edu.agh.emotionalrobot.recognizers;
 
+import android.util.Pair;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -8,5 +10,7 @@ public interface EmotionRecognizer {
 
     public String getName();
 
-    public ByteBuffer getRawData();
+    public byte[] getRawData();
+
+    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData();
 }
