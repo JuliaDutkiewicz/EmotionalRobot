@@ -14,7 +14,7 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
     }
 
     @Override
-    protected float[][][][] preproscessImage(Bitmap bmp) {
+    protected float[][][][] preprocessImage(Bitmap bmp) {
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bmp, 64, 64, false);
         float[][][][] result = new float[1][64][64][1];
         for (int i = 0; i < 64; i++)

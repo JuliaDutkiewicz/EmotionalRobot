@@ -68,7 +68,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
             return emotions;
         }
 
-        float[][][][] input = preproscessImage(face);
+        float[][][][] input = preprocessImage(face);
         float[][] output = new float[1][7];
         interpreter.run(input, output);
 
@@ -102,5 +102,5 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         return tempBitmap;
     }
 
-    protected abstract float[][][][] preproscessImage(Bitmap bmp);
+    protected abstract float[][][][] preprocessImage(Bitmap bmp);
 }
