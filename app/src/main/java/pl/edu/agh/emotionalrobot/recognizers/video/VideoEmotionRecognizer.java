@@ -35,6 +35,11 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
 
 
     @Override
+    public String getName() {
+        return "video";
+    }
+
+    @Override
     public ByteBuffer getRawData() {
         return null;
     }
