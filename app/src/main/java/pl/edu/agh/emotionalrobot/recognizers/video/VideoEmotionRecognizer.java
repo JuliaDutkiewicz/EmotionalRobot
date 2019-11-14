@@ -40,14 +40,4 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
     public String getName() {
         return "video";
     }
-
-    @Override
-    public byte[] getRawData() {
-        return null;
-    }
-
-    @Override
-    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        return null;
-    }
 }

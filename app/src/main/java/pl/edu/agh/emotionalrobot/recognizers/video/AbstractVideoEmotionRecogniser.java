@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.hardware.camera2.CameraManager;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import com.google.android.gms.vision.Frame;
@@ -16,6 +17,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.tensorflow.lite.Interpreter;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.MappedByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -60,8 +62,14 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     @Override
     public Map<String, Float> getEmotions() {
-        Map<String, Float> emotions = new HashMap<>();
         Bitmap image = camera.getPicture();
+        Map<String, Float> emotions = getEmotionMap(image);
+        Log.i("VideoEmotionRecognizer", emotions.toString());
+        return emotions;
+    }
+
+    private Map<String, Float> getEmotionMap(Bitmap image) {
+        Map<String, Float> emotions = new HashMap<>();
         Bitmap face = getFace(image);
         if (face == null) {
             emotions.put("no_face", (float) 1.0);
@@ -75,10 +83,8 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         for (int i = 0; i < emotionNames.size(); i++) {
             emotions.put(emotionNames.get(i), output[0][i]);
         }
-        Log.i("VideoEmotionRecognizer", emotions.toString());
         return emotions;
     }
-
 
     private Bitmap getFace(Bitmap bmp) {
         if (!faceDetector.isOperational()) {
@@ -97,10 +103,29 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         float y1 = face.getPosition().y;
         float width = face.getWidth();
         float height = face.getHeight();
-        Bitmap tempBitmap = Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
+        return Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
                 bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
-        return tempBitmap;
     }
 
     protected abstract float[][][][] preprocessImage(Bitmap bmp);
+
+    @Override
+    public byte[] getRawData() {
+        Bitmap image = camera.getPicture();
+        return getBytesFromBitmap(image);
+    }
+
+    private byte[] getBytesFromBitmap(Bitmap image) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        image.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    @Override
+    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
+        Bitmap image = camera.getPicture();
+        Map<String, Float> emotions = getEmotionMap(image);
+        byte[] rawData = getBytesFromBitmap(image);
+        return new Pair<>(emotions, rawData);
+    }
 }
