@@ -22,9 +22,9 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import pl.edu.agh.emotionalrobot.recognizers.audio.AudioEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
-import pl.edu.agh.emotionalrobot.recognizers.audio.SpeechAudioEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.audio.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.video.AbstractVideoEmotionRecogniser;
 import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
 
@@ -42,7 +42,7 @@ public class EmotionService extends Service {
     public EmotionService() {
     }
 
-    private AudioEmotionRecognizer loadAudioRecognizerFromConfig() throws IOException {
+    private AbstractAudioEmotionRecognizer loadAudioRecognizerFromConfig() throws IOException {
 
         String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
         String audioModelName = null;
@@ -52,7 +52,7 @@ public class EmotionService extends Service {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
         try {
-            return new SpeechAudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
+            return new AudioEmotionRecognizer(loadModelFile(audioModelName), configJson);
         } catch (IOException e) {
             Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
             throw e;
@@ -120,12 +120,12 @@ public class EmotionService extends Service {
         try {
             emotionRecognizers.add(loadAudioRecognizerFromConfig());
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Couldn't add AudioEmotionRecognizer to EmotionDataGatherer");
+            Log.e(LOG_TAG, "Couldn't add AbstractAudioEmotionRecognizer to EmotionDataGatherer");
         }
         try {
             emotionRecognizers.add(loadVideoRecognizerFromConfig());
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Couldn't add AudioEmotionRecognizer to EmotionDataGatherer");
+            Log.e(LOG_TAG, "Couldn't add AbstractAudioEmotionRecognizer to EmotionDataGatherer");
         }
 
         emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
