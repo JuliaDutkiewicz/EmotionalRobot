@@ -24,7 +24,8 @@ import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.recognizers.AudioEmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
-import pl.edu.agh.emotionalrobot.recognizers.VideoEmotionRecognizer;
+import pl.edu.agh.emotionalrobot.recognizers.video.AbstractVideoEmotionRecogniser;
+import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
 
 public class EmotionService extends Service {
     private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
@@ -57,7 +58,7 @@ public class EmotionService extends Service {
         }
     }
 
-    private VideoEmotionRecognizer loadVideoRecognizerFromConfig() throws Exception {
+    private AbstractVideoEmotionRecogniser loadVideoRecognizerFromConfig() throws Exception {
         String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
         String videoModelName = null;
         try {
