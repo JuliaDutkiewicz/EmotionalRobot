@@ -27,6 +27,7 @@ public class EmotionDataGatherer {
                 try {
                     for (EmotionRecognizer recognizer : emotionRecognizers) {
                         updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions());
+                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

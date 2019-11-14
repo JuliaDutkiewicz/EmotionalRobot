@@ -9,6 +9,7 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -44,6 +45,16 @@ class UpdateSender {
         }
     }
 
+    public boolean sendUpdate(final Date timestamp, final ByteBuffer rawData) {
+        try {
+            client.connect(null, new ActionListener(client, rawData));
+            return true;
+        } catch (MqttException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     private String formatData(Date timestamp, Map<String, Float> emotionData) {
         StringBuilder stringBuilder = new StringBuilder();
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
@@ -61,17 +72,28 @@ class UpdateSender {
 
     private static class ActionListener implements IMqttActionListener {
         private final MqttAndroidClient client;
-        private final String message;
+        private String message;
+        private ByteBuffer byteMessage;
 
         ActionListener(MqttAndroidClient client, String message) {
             this.client = client;
             this.message = message;
         }
 
+        ActionListener(MqttAndroidClient client, ByteBuffer message) {
+            this.client = client;
+            this.byteMessage = message;
+            this.message = "";
+        }
+
         @Override
         public void onSuccess(IMqttToken asyncActionToken) {
             try {
-                client.publish("emorobo.mqtt.example.topic", new MqttMessage(message.getBytes()));
+                if (!message.isEmpty())
+                    client.publish("emorobo.mqtt.results.topic", new MqttMessage(message.getBytes()));
+                System.out.println("Sending...");
+                if (byteMessage != null && byteMessage.array().length!=0)
+                    client.publish("emorobo.mqtt.raw.topic", new MqttMessage(byteMessage.array()));
             } catch (MqttException e) {
                 e.printStackTrace();
             }

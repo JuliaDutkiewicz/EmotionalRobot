@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.hardware.camera2.CameraManager;
 
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
 public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
@@ -30,5 +31,11 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
                 result[0][j][i][0] = gray;
             }
         return result;
+    }
+
+
+    @Override
+    public ByteBuffer getRawData() {
+        return null;
     }
 }
