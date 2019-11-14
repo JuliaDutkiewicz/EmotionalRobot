@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.PreDestroy;
+
 import pl.edu.agh.emotionalrobot.recognizers.audio.utils.MFCC;
 
 public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
@@ -98,13 +100,18 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     @Override
     public Map<String, Float> getEmotions() {
         record();
-        return recognize();
+        short[] inputBuffer = getRecordedAudioBuffer();
+        return recognize(inputBuffer);
     }
 
     @Override
     public byte[] getRawData() {
         record();
         short[] audioBuffer = getRecordedAudioBuffer();
+        return extractRawData(audioBuffer);
+    }
+
+    private byte[] extractRawData(short[] audioBuffer) {
         ByteBuffer byteAudioBuffer = ByteBuffer.allocate(audioBuffer.length * 2);
 
         for (short i1 : audioBuffer) {
@@ -118,7 +125,11 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        return null;
+        record();
+        short[] audioBuffer = getRecordedAudioBuffer();
+        Map<String, Float> emotions = recognize(audioBuffer);
+        byte[] rawData = extractRawData(audioBuffer);
+        return new Pair<>(emotions, rawData);
     }
 
     public short[] getRecordedAudioBuffer() {
@@ -169,15 +180,14 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         return bufferSize;
     }
 
-    private Map<String, Float> recognize() {
-        short[] inputBuffer = getRecordedAudioBuffer();
+    private Map<String, Float> recognize(short[] inputBuffer) {
 
         float[][] outputFull = new float[1][outputBufferSize];
         for (int j = 0; j < outputBufferSize; j++) {
             outputFull[0][j] += 0;
         }
 
-        float[] mfccInput = preProcessing(inputBuffer);
+        float[] mfccInput = preProcess(inputBuffer);
         int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
         for (int k = 0; k < REPEATS_TIMES; k++) {
             float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
@@ -190,8 +200,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         for (int j = 0; j < outputBufferSize; j++) {
             outputFull[0][j] /= REPEATS_TIMES;
         }
-//        audioRecord.stop();
-        return postProcessing(outputFull[0]);
+        return postProcess(outputFull[0]);
     }
 
     // process recorded audio to buffer required by neural network
@@ -204,7 +213,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    float[] preProcessing(short[] inputBuffer) {
+    float[] preProcess(short[] inputBuffer) {
         double[] floatInputBuffer = new double[inputBuffer.length];
         MFCC mfccConvert = new MFCC();
         for (int i = 0; i < inputBuffer.length; i++) {
@@ -214,7 +223,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    HashMap<String, Float> postProcessing(float[] floats) {
+    HashMap<String, Float> postProcess(float[] floats) {
         HashMap<String, Float> results = new HashMap<>();
         StringBuilder resultsText = new StringBuilder("Results: \n");
         for (int i = 0; i < outputBufferSize; i++) {
@@ -223,5 +232,10 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         }
         Log.v(LOG_TAG, resultsText.toString());
         return results;
+    }
+
+    @PreDestroy
+    public void stopRecording() {
+        audioRecord.stop();
     }
 }
