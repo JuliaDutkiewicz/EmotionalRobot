@@ -9,6 +9,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.annotation.PreDestroy;
+
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognizer {
@@ -26,9 +28,9 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     abstract void initAudioRecord();
 
-    abstract float[] preProcessing(short[] inputBuffer);
+    abstract float[] preProcess(short[] inputBuffer);
 
-    abstract HashMap<String, Float> postProcessing(float[] floats);
+    abstract HashMap<String, Float> postProcess(float[] floats);
 
     int getDataValue(String jsonData, String key) {
         try {
@@ -55,4 +57,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         }
         return outputNames;
     }
+
+    @PreDestroy
+    abstract void stopRecording();
 }
