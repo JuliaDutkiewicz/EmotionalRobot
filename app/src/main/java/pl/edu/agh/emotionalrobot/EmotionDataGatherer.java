@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public class EmotionDataGatherer {
@@ -26,14 +27,19 @@ public class EmotionDataGatherer {
             public void run() {
                 try {
                     for (EmotionRecognizer recognizer : emotionRecognizers) {
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions());
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData());
+                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }, 0, options.interval);
+    }
+
+    public void setUpdateInterval(int interval) {
+        // TODO
+        // to stop timer: apparently .cancel() & ev. .purge()
+        // so if message arrives to ConfigReceiver, some sort of method like "reschedule" should be called
     }
 
     public static class Options {

@@ -29,15 +29,13 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     // neural network size
     private static final int DEFAULT_INPUT_BUFFER_SIZE = 216;
     private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
-
+    private final ReentrantLock recordingBufferLock = new ReentrantLock();
     private int sampleRate;
     private int inputBufferSize;
     private int outputBufferSize; // warning: must be equals outputNames.size()
     private int recordingLength;
-
     private short[] recordingBuffer;
     private int recordingOffset = 0;
-    private final ReentrantLock recordingBufferLock = new ReentrantLock();
     private short[] audioBuffer;
     private AudioRecord audioRecord;
     private Interpreter interpreter;
@@ -47,6 +45,19 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         this.interpreter = new Interpreter(modelFile);
         initConfigData(jsonData);
         initAudioRecord();
+    }
+
+    public static double[] normalize(double[] arr) {
+        double minn = Double.MAX_VALUE;
+        double maxn = Double.MIN_VALUE;
+        for (int i = 0; i < arr.length; i++) {
+            maxn = Math.max(arr[i], maxn);
+            minn = Math.min(arr[i], minn);
+        }
+        for (int i = 0; i < arr.length; i++) {
+            arr[i] = (arr[i] - minn) / (maxn - minn);
+        }
+        return arr;
     }
 
     @Override
@@ -102,7 +113,6 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         return byteAudioBuffer;
     }
 
-
     public short[] getRecordedAudioBuffer() {
         short[] inputBuffer = new short[recordingLength];
 
@@ -119,6 +129,10 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         return inputBuffer;
     }
 
+    @Override
+    public String getName() {
+        return "audio";
+    }
 
     private void record() {
         int numberRead = audioRecord.read(audioBuffer, 0, audioBuffer.length);
@@ -189,19 +203,6 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
             floatInputBuffer[i] = (double) (inputBuffer[i] / 1.0);
         }
         return mfccConvert.process(floatInputBuffer);
-    }
-
-    public static double[] normalize(double[] arr) {
-        double minn = Double.MAX_VALUE;
-        double maxn = Double.MIN_VALUE;
-        for (int i = 0; i < arr.length; i++) {
-            maxn = Math.max(arr[i], maxn);
-            minn = Math.min(arr[i], minn);
-        }
-        for (int i = 0; i < arr.length; i++) {
-            arr[i] = (arr[i] - minn) / (maxn - minn);
-        }
-        return arr;
     }
 
     @Override
