@@ -1,10 +1,12 @@
 package pl.edu.agh.emotionalrobot.communication;
 
-public class ConfigReceiver {
-    // emotion data/raw data - change in updateSender
-    // start/stop entire service - EmotionDataGatherer
-    // update tick - EmotionDataGatherer
+import pl.edu.agh.emotionalrobot.EmotionDataGatherer;
 
-    //register(gatherer) - can have only one gatherer at once
-    //register(updatesender) - like above
+public class ConfigReceiver {
+    private final EmotionDataGatherer emotionDataGatherer;
+
+    public ConfigReceiver(EmotionDataGatherer emotionDataGatherer) {
+        this.emotionDataGatherer = emotionDataGatherer;
+        // start MQTT client with adequate callbacks
+    }
 }

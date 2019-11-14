@@ -27,15 +27,17 @@ public class EmotionDataGatherer {
             public void run() {
                 try {
                     for (EmotionRecognizer recognizer : emotionRecognizers) {
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions());
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData());
+                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }, 0, options.interval);
+    }
 
+    public void setUpdateInterval(int interval) {
+        // TODO
         // to stop timer: apparently .cancel() & ev. .purge()
         // so if message arrives to ConfigReceiver, some sort of method like "reschedule" should be called
     }

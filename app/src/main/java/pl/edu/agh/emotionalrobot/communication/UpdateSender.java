@@ -1,6 +1,7 @@
 package pl.edu.agh.emotionalrobot.communication;
 
 import android.content.Context;
+import android.util.Base64;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -38,9 +39,9 @@ public class UpdateSender {
         return this.initialized;
     }
 
-    public boolean sendUpdate(final Date timestamp, final byte[] rawData) {
+    public boolean sendUpdate(final Date timestamp, final byte[] rawData, final String recognizerName) {
         try {
-            String message = formatRawData(timestamp, rawData);
+            String message = formatRawData(timestamp, rawData, recognizerName);
             ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
             client.connect(null, callback);
             return true;
@@ -50,15 +51,18 @@ public class UpdateSender {
         }
     }
 
-    private String formatRawData(Date timestamp, byte[] rawData) throws JSONException {
+    private String formatRawData(Date timestamp, byte[] rawData, String recognizerName) throws JSONException {
         JSONObject update = new JSONObject();
-        update.put("network", "nazwa sieci");
-        return null;
+        update.put("network", recognizerName);
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
+        update.put("timestamp", format.format(timestamp));
+        update.put("raw_data", Base64.encodeToString(rawData, Base64.DEFAULT));
+        return update.toString();
     }
 
-    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData) {
+    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData, String recognizerName) {
         try {
-            String message = formatEmotionData(timestamp, emotionData);
+            String message = formatEmotionData(timestamp, emotionData, recognizerName);
             ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
             client.connect(null, callback);
             return true;
@@ -68,9 +72,9 @@ public class UpdateSender {
         }
     }
 
-    private String formatEmotionData(Date timestamp, final Map<String, Float> emotionData) throws JSONException {
+    private String formatEmotionData(Date timestamp, final Map<String, Float> emotionData, String recognizerName) throws JSONException {
         JSONObject update = new JSONObject();
-        update.put("network", "nazwa sieci");
+        update.put("network", recognizerName);
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
         update.put("timestamp", format.format(timestamp));
         JSONObject emotionDataObject = new JSONObject();
@@ -78,10 +82,8 @@ public class UpdateSender {
             emotionDataObject.put(key, emotionData.get(key));
         }
         update.put("emotion-data", emotionDataObject);
-        JSONObject outData = new JSONObject();
-        outData.put("update", update);
 
-        return outData.toString();
+        return update.toString();
     }
 
     private static class ActionListener implements IMqttActionListener {
