@@ -29,18 +29,19 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
     private static final String TAG = "VideoEmotionRecognizer";
     private FaceDetector faceDetector;
     private Interpreter interpreter;
-    private Camera camera;
+    private ICamera camera;
     private Context applicationContext;
 
     private LinkedList<String> emotionNames;
 
-    public AbstractVideoEmotionRecogniser(Context context, int screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
+    public AbstractVideoEmotionRecogniser(Context context, Integer screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
         this.interpreter = new Interpreter(model);
         this.emotionNames = getEmotionNames(config);
         this.faceDetector = new
                 FaceDetector.Builder(context).setTrackingEnabled(false)
                 .build();
-        this.camera = new Camera(context, screenRotation, cameraManager);
+//        this.camera = new Camera2(context, screenRotation, cameraManager);
+        this.camera = new Camera1(context, screenRotation);
         this.applicationContext = context;
     }
 
