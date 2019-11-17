@@ -118,7 +118,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     private byte[] getBytesFromBitmap(Bitmap image) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        image.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+        image.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
         return byteArrayOutputStream.toByteArray();
     }
 
