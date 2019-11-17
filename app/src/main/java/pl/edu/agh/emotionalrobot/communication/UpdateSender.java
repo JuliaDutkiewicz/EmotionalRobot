@@ -1,7 +1,7 @@
 package pl.edu.agh.emotionalrobot.communication;
 
 import android.content.Context;
-import android.util.Base64;
+import android.util.Pair;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -9,12 +9,10 @@ import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONException;
-import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 import java.util.Map;
 
 public class UpdateSender {
@@ -31,7 +29,7 @@ public class UpdateSender {
     public void initialize() {
         String clientId = MqttClient.generateClientId();
         String serverURI = String.format("%s://%s:%s", config.BROKER_PROTOCOL, config.BROKER_IP_OR_NAME, config.BROKER_PORT);
-        client = new MqttAndroidClient(context, serverURI, clientId);
+        client = new MqttAndroidClient(context, serverURI, clientId, new MemoryPersistence(), MqttAndroidClient.Ack.AUTO_ACK);
         initialized = true;
     }
 
@@ -41,9 +39,7 @@ public class UpdateSender {
 
     public boolean sendUpdate(final Date timestamp, final byte[] rawData, final String recognizerName) {
         try {
-            String message = formatRawData(timestamp, rawData, recognizerName);
-            ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
-            client.connect(null, callback);
+            send(Formatter.formatRawData(timestamp, rawData, recognizerName));
             return true;
         } catch (MqttException | JSONException e) {
             e.printStackTrace();
@@ -51,20 +47,14 @@ public class UpdateSender {
         }
     }
 
-    private String formatRawData(Date timestamp, byte[] rawData, String recognizerName) throws JSONException {
-        JSONObject update = new JSONObject();
-        update.put("network", recognizerName);
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
-        update.put("timestamp", format.format(timestamp));
-        update.put("raw_data", Base64.encodeToString(rawData, Base64.DEFAULT));
-        return update.toString();
+    private void send(String message) throws MqttException {
+        ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
+        client.connect(null, callback);
     }
 
     public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData, String recognizerName) {
         try {
-            String message = formatEmotionData(timestamp, emotionData, recognizerName);
-            ActionListener callback = new ActionListener(client, message, config.UPDATE_TOPIC);
-            client.connect(null, callback);
+            send(Formatter.formatEmotionData(timestamp, emotionData, recognizerName));
             return true;
         } catch (MqttException | JSONException e) {
             e.printStackTrace();
@@ -72,18 +62,14 @@ public class UpdateSender {
         }
     }
 
-    private String formatEmotionData(Date timestamp, final Map<String, Float> emotionData, String recognizerName) throws JSONException {
-        JSONObject update = new JSONObject();
-        update.put("network", recognizerName);
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
-        update.put("timestamp", format.format(timestamp));
-        JSONObject emotionDataObject = new JSONObject();
-        for (String key : emotionData.keySet()) {
-            emotionDataObject.put(key, emotionData.get(key));
+    public boolean sendUpdate(final Date timestamp, final Pair<Map<String, Float>, byte[]> emotionWithRawData, String recognizerName) {
+        try {
+            send(Formatter.formatEmotionWithRawData(timestamp, emotionWithRawData, recognizerName));
+            return true;
+        } catch (MqttException | JSONException e) {
+            e.printStackTrace();
+            return false;
         }
-        update.put("emotion-data", emotionDataObject);
-
-        return update.toString();
     }
 
     private static class ActionListener implements IMqttActionListener {
