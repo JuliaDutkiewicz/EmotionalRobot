@@ -5,5 +5,5 @@
   "BASE_TOPIC": "emorobo.mqtt.messages",
   "UPDATE_TOPIC_SUFFIX": ".update",
   "CONFIGURATION_TOPIC_SUFFIX":".config",
-  "DEFAULT_TICK_LENGTH": 500
+  "DEFAULT_TICK_LENGTH": 1000
 }
