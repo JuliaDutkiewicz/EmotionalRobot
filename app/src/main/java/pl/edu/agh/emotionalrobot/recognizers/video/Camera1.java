@@ -1,20 +1,12 @@
 package pl.edu.agh.emotionalrobot.recognizers.video;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
-import android.os.Environment;
 import android.util.Log;
-import android.widget.Toast;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class Camera1 implements ICamera {
 
@@ -32,55 +24,10 @@ public class Camera1 implements ICamera {
 
             Bitmap bitmapImage = BitmapFactory.decodeByteArray(data, 0, data.length, null);
 
-//            savePicture(bitmapImage);
-
             synchronized (semaphore) {
                 currentImage = bitmapImage;
                 semaphore.notify();
             }
-        }
-
-        private void savePicture(Bitmap bitmapImage) {
-            Log.d("Camera1", "Picture taken");
-            File pictureFileDir = getDir();
-
-            if (!pictureFileDir.exists() && !pictureFileDir.mkdirs()) {
-
-                Log.d("Camera1", "Can't create directory to save image.");
-                Toast.makeText(context, "Can't create directory to save image.",
-                        Toast.LENGTH_LONG).show();
-                return;
-
-            }
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyymmddhhmmss");
-            String date = dateFormat.format(new Date());
-            String photoFile = "Picture_" + date + ".jpg";
-
-            String filename = pictureFileDir.getPath() + File.separator + photoFile;
-
-            File pictureFile = new File(filename);
-
-            try {
-                FileOutputStream fos = new FileOutputStream(pictureFile);
-                bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                fos.flush();
-                fos.close();
-                Toast.makeText(context, "New Image saved:" + photoFile,
-                        Toast.LENGTH_LONG).show();
-            } catch (Exception error) {
-                Log.d("Camera1", "File" + filename + "not saved: "
-                        + error.getMessage());
-                Toast.makeText(context, "Image could not be saved.",
-                        Toast.LENGTH_LONG).show();
-            }
-
-        }
-
-        private File getDir() {
-            File sdDir = Environment
-                    .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            return new File(sdDir, "CameraAPIDemo");
         }
     };
 
@@ -95,15 +42,6 @@ public class Camera1 implements ICamera {
         this.context = context;
         try {
             camera = Camera.open(cameraId);
-            Camera.Parameters params = camera.getParameters();
-//            if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-//                params.set("orientation", "portrait");
-//                params.set("rotation", 90);
-//            }
-//            if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//                params.set("orientation", "landscape");
-//                params.set("rotation", 0);
-//            }
             camera.enableShutterSound(false);
             surfaceTexture = new SurfaceTexture(10);
             camera.setPreviewTexture(surfaceTexture);
