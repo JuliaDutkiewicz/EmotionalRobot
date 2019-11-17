@@ -18,7 +18,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PreDestroy;
 
-import pl.edu.agh.emotionalrobot.recognizers.audio.utils.MFCC;
+import pl.edu.agh.emotionalrobot.recognizers.audio.utils.LibrosaMFCC;
+import pl.edu.agh.emotionalrobot.recognizers.audio.utils.TarsosMFCC;
 
 public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
@@ -182,25 +183,33 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     private Map<String, Float> recognize(short[] inputBuffer) {
 
-        float[][] outputFull = new float[1][outputBufferSize];
-        for (int j = 0; j < outputBufferSize; j++) {
-            outputFull[0][j] += 0;
-        }
+//    //    LibrosaMFCC
+//        float[] mfccInput = preProcess(inputBuffer);
+//        float[][] outputFull = new float[1][outputBufferSize];
+//        for (int j = 0; j < outputBufferSize; j++) {
+//            outputFull[0][j] += 0;
+//        }
+//        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
+//        if (REPEATS_TIMES != 0) {
+//            for (int k = 0; k < REPEATS_TIMES; k++) {
+//                float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
+//                float[][] output = new float[1][outputBufferSize];
+//                interpreter.run(floatInputBuffer, output);
+//                for (int j = 0; j < outputBufferSize; j++) {
+//                    outputFull[0][j] += output[0][j];
+//                }
+//            }
+//            for (int j = 0; j < outputBufferSize; j++) {
+//                outputFull[0][j] /= REPEATS_TIMES;
+//            }
+//        }
+//        return postProcess(output[0]);
+
 
         float[] mfccInput = preProcess(inputBuffer);
-        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
-        for (int k = 0; k < REPEATS_TIMES; k++) {
-            float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
-            float[][] output = new float[1][outputBufferSize];
-            interpreter.run(floatInputBuffer, output);
-            for (int j = 0; j < outputBufferSize; j++) {
-                outputFull[0][j] += output[0][j];
-            }
-        }
-        for (int j = 0; j < outputBufferSize; j++) {
-            outputFull[0][j] /= REPEATS_TIMES;
-        }
-        return postProcess(outputFull[0]);
+        float[][] output = new float[1][outputBufferSize];
+        interpreter.run(mfccInput, output);
+        return postProcess(output[0]);
     }
 
     // process recorded audio to buffer required by neural network
@@ -214,10 +223,21 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     float[] preProcess(short[] inputBuffer) {
-        double[] floatInputBuffer = new double[inputBuffer.length];
-        MFCC mfccConvert = new MFCC();
+//        Librosa MFCC
+//        double[] doubleInputBuffer = new double[inputBuffer.length];
+//        LibrosaMFCC mfccConvert = new LibrosaMFCC();
+//        for (int i = 0; i < inputBuffer.length; i++) {
+//            doubleInputBuffer[i] = (double) (inputBuffer[i] / 1.0);
+//        }
+//
+//        return mfccConvert.process(doubleInputBuffer);
+
+        // TarsosMFCC
+        float[] floatInputBuffer = new float[inputBuffer.length];
+        TarsosMFCC mfccConvert = new TarsosMFCC(DEFAULT_RECORDING_LENGTH, sampleRate);
         for (int i = 0; i < inputBuffer.length; i++) {
-            floatInputBuffer[i] = (double) (inputBuffer[i] / 1.0);
+            floatInputBuffer[i] = (float) (inputBuffer[i] / 32767.0f);
+//            System.out.println(floatInputBuffer[i]);
         }
         return mfccConvert.process(floatInputBuffer);
     }

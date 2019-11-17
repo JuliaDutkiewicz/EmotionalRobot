@@ -1,14 +1,14 @@
 package pl.edu.agh.emotionalrobot.recognizers.audio.utils;
 
 
-public class MFCC {
+public class LibrosaMFCC {
 
     // default args
     private Integer samplingRate = 44100;
     private Integer numberOfMfccsToReturn = 25; //not default but this is used by nn creators
     private Integer lengthOfFftWindow = 2048;
 
-    private FFT fft = new FFT();
+    private LibrosaFFT librosaFft = new LibrosaFFT();
 
     public float[] process(double[] yArray) {
         double[][] spectrogram = powerToDb(melspectrogram(yArray));
@@ -133,7 +133,7 @@ public class MFCC {
 //                           dtype=dtype,
 //                           order='F')
         double[][] stftMatrix = new double[(int) (1 + windowLength / 2)][yFrames[0].length];
-//    fft = get_fftlib()
+//    librosaFft = get_fftlib()
         double[] columns = new double[windowLength];
 //    # how many columns can we fit within MAX_MEM_BLOCK?
 //    n_columns = int(util.MAX_MEM_BLOCK / (stft_matrix.shape[0] *
@@ -150,7 +150,7 @@ public class MFCC {
 //    for bl_s in range(0, stft_matrix.shape[1], n_columns):
 //        bl_t = min(bl_s + n_columns, stft_matrix.shape[1])
 //
-//        stft_matrix[:, bl_s:bl_t] = fft.rfft(fft_window *
+//        stft_matrix[:, bl_s:bl_t] = librosaFft.rfft(fft_window *
 //                                             y_frames[:, bl_s:bl_t],
 //                                             axis=0)
 //    return stft_matrix
@@ -158,10 +158,10 @@ public class MFCC {
     }
 
     private double[] fftSpec(double[] frame) {
-        fft.process(frame);
+        librosaFft.process(frame);
         double[] result = new double[frame.length];
         for (int i = 0; i < frame.length; i++) {
-            result[i] = fft.real[i] * fft.real[i] + fft.imag[i] * fft.imag[i];
+            result[i] = librosaFft.real[i] * librosaFft.real[i] + librosaFft.imag[i] * librosaFft.imag[i];
         }
         return result;
     }
@@ -201,12 +201,12 @@ public class MFCC {
     }
 
     private double[][] filtersMel() {
-//        Create a Filterbank matrix to combine FFT bins into Mel-frequency bins
+//        Create a Filterbank matrix to combine LibrosaFFT bins into Mel-frequency bins
         int numberOfMelBandsToGenerate = 128;
         int lengthOfTheFftWindow = 2048;
 //        # Initialize the weights
         double[][] weights = new double[numberOfMelBandsToGenerate][1 + lengthOfTheFftWindow / 2];
-//      # Center freqs of each FFT bin
+//      # Center freqs of each LibrosaFFT bin
         double[] fftFreqs = fftFrequencies();
 //    fftfreqs = fft_frequencies(sr=sr, n_fft=n_fft)
 //
