@@ -122,11 +122,11 @@ public class EmotionService extends Service {
         } catch (IOException e) {
             Log.e(LOG_TAG, "Couldn't add AbstractAudioEmotionRecognizer to EmotionDataGatherer");
         }
-        try {
-            emotionRecognizers.add(loadVideoRecognizerFromConfig());
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
-        }
+//        try {
+//            emotionRecognizers.add(loadVideoRecognizerFromConfig());
+//        } catch (Exception e) {
+//            Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
+//        }
 
         emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         try {

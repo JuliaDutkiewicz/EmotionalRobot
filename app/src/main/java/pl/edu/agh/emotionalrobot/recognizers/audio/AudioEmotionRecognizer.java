@@ -8,10 +8,12 @@ import android.util.Pair;
 
 import org.tensorflow.lite.Interpreter;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -113,15 +115,17 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     private byte[] extractRawData(short[] audioBuffer) {
-        ByteBuffer byteAudioBuffer = ByteBuffer.allocate(audioBuffer.length * 2);
+        byte[] byteAudioBuffer = new byte[audioBuffer.length * 2];
 
-        for (short i1 : audioBuffer) {
-            byteAudioBuffer.putShort(i1);
+        int i = 0;
+        for (short x : audioBuffer) {
+            byteAudioBuffer[i] = (byte) (x & 0x00FF);
+            byteAudioBuffer[i + 1] = (byte) ((x & 0xFF00) >> 8);
+            i += 2;
         }
-        byteAudioBuffer.order(ByteOrder.BIG_ENDIAN);
-        byte[] rawData = new byte[byteAudioBuffer.remaining()];
-        byteAudioBuffer.get(rawData);
-        return rawData;
+        String str = new String(byteAudioBuffer);
+        str = str.replaceAll("\n", "");
+        return str.getBytes();
     }
 
     @Override
@@ -205,11 +209,28 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 //        }
 //        return postProcess(output[0]);
 
-
-        float[] mfccInput = preProcess(inputBuffer);
-        float[][] output = new float[1][outputBufferSize];
-        interpreter.run(mfccInput, output);
-        return postProcess(output[0]);
+        float[][] outputFull = new float[1][outputBufferSize];
+        for (int j = 0; j < outputBufferSize; j++) {
+            outputFull[0][j] += 0;
+        }
+//                float[] mfccInput = preProcess(inputBuffer);
+//        float[][] output = new float[1][outputBufferSize];
+//        interpreter.run(mfccInput, output);
+//        return postProcess(output[0]);
+        float[] mfccInput = preProcessing(inputBuffer);
+        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
+        for (int k = 0; k < REPEATS_TIMES; k++) {
+            float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
+            float[][] output = new float[1][outputBufferSize];
+            interpreter.run(floatInputBuffer, output);
+            for (int j = 0; j < outputBufferSize; j++) {
+                outputFull[0][j] += output[0][j];
+            }
+        }
+        for (int j = 0; j < outputBufferSize; j++) {
+            outputFull[0][j] /= REPEATS_TIMES;
+        }
+        return postProcessing(outputFull[0]);
     }
 
     // process recorded audio to buffer required by neural network
@@ -222,7 +243,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    float[] preProcess(short[] inputBuffer) {
+    float[] preProcessing(short[] inputBuffer) {
 //        Librosa MFCC
 //        double[] doubleInputBuffer = new double[inputBuffer.length];
 //        LibrosaMFCC mfccConvert = new LibrosaMFCC();
@@ -243,7 +264,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    HashMap<String, Float> postProcess(float[] floats) {
+    HashMap<String, Float> postProcessing(float[] floats) {
         HashMap<String, Float> results = new HashMap<>();
         StringBuilder resultsText = new StringBuilder("Results: \n");
         for (int i = 0; i < outputBufferSize; i++) {
