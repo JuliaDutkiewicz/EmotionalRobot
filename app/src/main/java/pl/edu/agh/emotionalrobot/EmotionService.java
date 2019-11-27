@@ -71,10 +71,10 @@ public class EmotionService extends Service {
         try {
             CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
             WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-            final int rotation = window.getDefaultDisplay().getRotation();
+            final Integer rotation = window.getDefaultDisplay().getRotation();
             return new VideoEmotionRecognizer(getApplicationContext(), rotation, manager, loadModelFile(videoModelName), configJson);
         } catch (Exception e) {
-            Log.v(LOG_TAG, "Error by loading audio model. " + e.getMessage());
+            Log.v(LOG_TAG, "Error by loading video model. " + e.getMessage());
             throw e;
         }
     }
