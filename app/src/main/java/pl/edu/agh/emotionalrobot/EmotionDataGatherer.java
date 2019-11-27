@@ -1,5 +1,6 @@
 package pl.edu.agh.emotionalrobot;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Timer;
@@ -28,7 +29,8 @@ public class EmotionDataGatherer {
                 try {
                     for (EmotionRecognizer recognizer : emotionRecognizers) {
                         updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName());
+//                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName());
+                        System.out.println("Send: " + Arrays.toString(recognizer.getRawData()));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -27,7 +27,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
 
     private static final int DEFAULT_SAMPLE_RATE = 44100;
-    private static final int DEFAULT_RECORDING_LENGTH = 44280;
+    private static final int DEFAULT_RECORDING_LENGTH = 44100;
     // minimal buffer length for sample rate 16000 Hz is 1280 => 1296
     // minimal buffer length for sample rate 44100 Hz is 3584 => 3672 - this configuration is recommended
     // because 44100 Hz was the sample rate for training the current neural network
@@ -115,18 +115,36 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     private byte[] extractRawData(short[] audioBuffer) {
-        byte[] byteAudioBuffer = new byte[audioBuffer.length * 2];
-
+        float[] floatAudioBuffer = shortToFloat(audioBuffer);
+        byte[] byteAudioBuffer = new byte[floatAudioBuffer.length *4];
         int i = 0;
         for (short x : audioBuffer) {
             byteAudioBuffer[i] = (byte) (x & 0x00FF);
             byteAudioBuffer[i + 1] = (byte) ((x & 0xFF00) >> 8);
             i += 2;
         }
-        String str = new String(byteAudioBuffer);
-        str = str.replaceAll("\n", "");
-        return str.getBytes();
+        return floatArray2ByteArray(floatAudioBuffer);
     }
+
+    public static byte[] floatArray2ByteArray(float[] values){
+        ByteBuffer buffer = ByteBuffer.allocate(4 * values.length);
+
+        for (float value : values){
+            buffer.putFloat(value);
+        }
+
+        return buffer.array();
+    }
+
+
+    public static float[] shortToFloat (short[] shortArray){
+        float[] floatOut = new float[shortArray.length];
+        for (int i = 0; i < shortArray.length; i++) {
+            floatOut[i] = shortArray[i] / 32768.0f;
+        }
+        return floatOut;
+    }
+
 
     @Override
     public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
@@ -244,6 +262,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     float[] preProcessing(short[] inputBuffer) {
+        double[] floatInputBuffer = new double[inputBuffer.length];
 //        Librosa MFCC
 //        double[] doubleInputBuffer = new double[inputBuffer.length];
 //        LibrosaMFCC mfccConvert = new LibrosaMFCC();
@@ -254,12 +273,20 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 //        return mfccConvert.process(doubleInputBuffer);
 
         // TarsosMFCC
-        float[] floatInputBuffer = new float[inputBuffer.length];
-        TarsosMFCC mfccConvert = new TarsosMFCC(DEFAULT_RECORDING_LENGTH, sampleRate);
+// // TarsosMFCC
+//        float[] floatInputBuffer = new float[inputBuffer.length];
+//        TarsosMFCC mfccConvert = new TarsosMFCC(DEFAULT_RECORDING_LENGTH, sampleRate);
+//        for (int i = 0; i < inputBuffer.length; i++) {
+//            floatInputBuffer[i] = (float) (inputBuffer[i] / 32767.0f);
+////            System.out.println(floatInputBuffer[i]);
+//        }
+//        return mfccConvert.process(floatInputBuffer);
+//    }
+//        float[] floatInputBuffer = new float[inputBuffer.length];
         for (int i = 0; i < inputBuffer.length; i++) {
-            floatInputBuffer[i] = (float) (inputBuffer[i] / 32767.0f);
-//            System.out.println(floatInputBuffer[i]);
+            floatInputBuffer[i] = (inputBuffer[i] / 32768.0f );
         }
+        LibrosaMFCC mfccConvert = new LibrosaMFCC();
         return mfccConvert.process(floatInputBuffer);
     }
 
