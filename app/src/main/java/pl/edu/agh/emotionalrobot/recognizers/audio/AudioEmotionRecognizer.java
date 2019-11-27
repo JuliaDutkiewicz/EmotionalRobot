@@ -8,12 +8,9 @@ import android.util.Pair;
 
 import org.tensorflow.lite.Interpreter;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -204,38 +201,12 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     private Map<String, Float> recognize(short[] inputBuffer) {
-
-//    //    LibrosaMFCC
-//        float[] mfccInput = preProcess(inputBuffer);
-//        float[][] outputFull = new float[1][outputBufferSize];
-//        for (int j = 0; j < outputBufferSize; j++) {
-//            outputFull[0][j] += 0;
-//        }
-//        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
-//        if (REPEATS_TIMES != 0) {
-//            for (int k = 0; k < REPEATS_TIMES; k++) {
-//                float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
-//                float[][] output = new float[1][outputBufferSize];
-//                interpreter.run(floatInputBuffer, output);
-//                for (int j = 0; j < outputBufferSize; j++) {
-//                    outputFull[0][j] += output[0][j];
-//                }
-//            }
-//            for (int j = 0; j < outputBufferSize; j++) {
-//                outputFull[0][j] /= REPEATS_TIMES;
-//            }
-//        }
-//        return postProcess(output[0]);
-
+//      LibrosaMFCC
         float[][] outputFull = new float[1][outputBufferSize];
         for (int j = 0; j < outputBufferSize; j++) {
             outputFull[0][j] += 0;
         }
-//                float[] mfccInput = preProcess(inputBuffer);
-//        float[][] output = new float[1][outputBufferSize];
-//        interpreter.run(mfccInput, output);
-//        return postProcess(output[0]);
-        float[] mfccInput = preProcessing(inputBuffer);
+        float[] mfccInput = preProcess(inputBuffer);
         int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
         for (int k = 0; k < REPEATS_TIMES; k++) {
             float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
@@ -248,7 +219,16 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         for (int j = 0; j < outputBufferSize; j++) {
             outputFull[0][j] /= REPEATS_TIMES;
         }
-        return postProcessing(outputFull[0]);
+        return postProcess(outputFull[0]);
+
+//        // TarsosMFCC
+//        float[] floatInputBuffer = new float[inputBuffer.length];
+//        TarsosMFCC mfccConvert = new TarsosMFCC(DEFAULT_RECORDING_LENGTH, sampleRate);
+//        for (int i = 0; i < inputBuffer.length; i++) {
+//            floatInputBuffer[i] = (float) (inputBuffer[i] / 32767.0f);
+////            System.out.println(floatInputBuffer[i]);
+//        }
+//        return postProcess(mfccConvert.process(floatInputBuffer));
     }
 
     // process recorded audio to buffer required by neural network
@@ -261,16 +241,8 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     }
 
     @Override
-    float[] preProcessing(short[] inputBuffer) {
-        double[] floatInputBuffer = new double[inputBuffer.length];
-//        Librosa MFCC
-//        double[] doubleInputBuffer = new double[inputBuffer.length];
-//        LibrosaMFCC mfccConvert = new LibrosaMFCC();
-//        for (int i = 0; i < inputBuffer.length; i++) {
-//            doubleInputBuffer[i] = (double) (inputBuffer[i] / 1.0);
-//        }
-//
-//        return mfccConvert.process(doubleInputBuffer);
+    float[] preProcess(short[] inputBuffer) {
+        double[] doubleInputBuffer = new double[inputBuffer.length];
 
         // TarsosMFCC
 // // TarsosMFCC
@@ -284,14 +256,14 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 //    }
 //        float[] floatInputBuffer = new float[inputBuffer.length];
         for (int i = 0; i < inputBuffer.length; i++) {
-            floatInputBuffer[i] = (inputBuffer[i] / 32768.0f );
+            doubleInputBuffer[i] = (inputBuffer[i] / 32768.0f );
         }
         LibrosaMFCC mfccConvert = new LibrosaMFCC();
-        return mfccConvert.process(floatInputBuffer);
+        return mfccConvert.process(doubleInputBuffer);
     }
 
     @Override
-    HashMap<String, Float> postProcessing(float[] floats) {
+    HashMap<String, Float> postProcess(float[] floats) {
         HashMap<String, Float> results = new HashMap<>();
         StringBuilder resultsText = new StringBuilder("Results: \n");
         for (int i = 0; i < outputBufferSize; i++) {
