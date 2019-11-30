@@ -129,4 +129,9 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         byte[] rawData = getBytesFromBitmap(image);
         return new Pair<>(emotions, rawData);
     }
+
+    @Override
+    public String getType() {
+        return "video";
+    }
 }
