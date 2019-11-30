@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.communication.CommunicationConfig;
+import pl.edu.agh.emotionalrobot.communication.ConfigReceiver;
 import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
@@ -133,6 +134,7 @@ public class EmotionService extends Service {
             CommunicationConfig communicationConfig = new CommunicationConfig(loadJSONFromAsset("communication.json"));
             EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
             UpdateSender updateSender = new UpdateSender(getApplicationContext(), communicationConfig);
+            ConfigReceiver configReceiver = new ConfigReceiver(getApplicationContext(), communicationConfig, emotionDataGatherer);
             //TODO put an animation on top of everything
             Log.v(LOG_TAG, "Starting gatherer process. ");
             emotionDataGatherer.startGatheringEmotions(updateSender, options);
