@@ -33,6 +33,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     private static final int DEFAULT_INPUT_BUFFER_SIZE = 216;
     private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
     private final ReentrantLock recordingBufferLock = new ReentrantLock();
+    private String nnName;
     private int sampleRate;
     private int inputBufferSize;
     private int outputBufferSize; // warning: must be equals outputNames.size()
@@ -50,19 +51,6 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         initAudioRecord();
     }
 
-    public static double[] normalize(double[] arr) {
-        double minn = Double.MAX_VALUE;
-        double maxn = Double.MIN_VALUE;
-        for (int i = 0; i < arr.length; i++) {
-            maxn = Math.max(arr[i], maxn);
-            minn = Math.min(arr[i], minn);
-        }
-        for (int i = 0; i < arr.length; i++) {
-            arr[i] = (arr[i] - minn) / (maxn - minn);
-        }
-        return arr;
-    }
-
     @Override
     void initConfigData(String jsonData) {
         this.outputNames = getOutputNames(jsonData);
@@ -70,6 +58,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         this.defaultValues.put(OUTPUT_BUFFER_SIZE, DEFAULT_OUTPUT_BUFFER_SIZE);
         this.defaultValues.put(SAMPLE_RATE, DEFAULT_SAMPLE_RATE);
         this.defaultValues.put(RECORDING_LENGTH, DEFAULT_RECORDING_LENGTH);
+        this.nnName = getDataString(jsonData, NN_NAME);
         this.inputBufferSize = getDataValue(jsonData, INPUT_BUFFER_SIZE);
         this.outputBufferSize = getDataValue(jsonData, OUTPUT_BUFFER_SIZE);
         this.sampleRate = getDataValue(jsonData, SAMPLE_RATE);
@@ -113,23 +102,14 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     private byte[] extractRawData(short[] audioBuffer) {
         float[] floatAudioBuffer = shortToFloat(audioBuffer);
-        byte[] byteAudioBuffer = new byte[floatAudioBuffer.length *4];
-        int i = 0;
-        for (short x : audioBuffer) {
-            byteAudioBuffer[i] = (byte) (x & 0x00FF);
-            byteAudioBuffer[i + 1] = (byte) ((x & 0xFF00) >> 8);
-            i += 2;
-        }
         return floatArray2ByteArray(floatAudioBuffer);
     }
 
     public static byte[] floatArray2ByteArray(float[] values){
         ByteBuffer buffer = ByteBuffer.allocate(4 * values.length);
-
         for (float value : values){
             buffer.putFloat(value);
         }
-
         return buffer.array();
     }
 
@@ -170,7 +150,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     public String getName() {
-        return "audio";
+        return nnName;
     }
 
     private void record() {
@@ -242,19 +222,17 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     float[] preProcess(short[] inputBuffer) {
-        double[] doubleInputBuffer = new double[inputBuffer.length];
 
-        // TarsosMFCC
 // // TarsosMFCC
 //        float[] floatInputBuffer = new float[inputBuffer.length];
 //        TarsosMFCC mfccConvert = new TarsosMFCC(DEFAULT_RECORDING_LENGTH, sampleRate);
 //        for (int i = 0; i < inputBuffer.length; i++) {
 //            floatInputBuffer[i] = (float) (inputBuffer[i] / 32767.0f);
-////            System.out.println(floatInputBuffer[i]);
 //        }
 //        return mfccConvert.process(floatInputBuffer);
-//    }
-//        float[] floatInputBuffer = new float[inputBuffer.length];
+
+// // LibrosaMFCC
+        double[] doubleInputBuffer = new double[inputBuffer.length];
         for (int i = 0; i < inputBuffer.length; i++) {
             doubleInputBuffer[i] = (inputBuffer[i] / 32768.0f );
         }

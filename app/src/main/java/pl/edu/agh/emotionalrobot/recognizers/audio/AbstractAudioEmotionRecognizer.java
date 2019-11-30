@@ -20,6 +20,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     static final String OUTPUT_BUFFER_SIZE = "OUTPUT_BUFFER_SIZE";
     static final String SAMPLE_RATE = "SAMPLE_RATE";
     static final String RECORDING_LENGTH = "RECORDING_LENGTH";
+    static final String NN_NAME = "NN_NAME";
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
     public abstract short[] getRecordedAudioBuffer();
@@ -40,6 +41,16 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
             Log.v(LOG_TAG, "Error while reading json, " + key + " set to default value ");
         }
         return defaultValues.get(key);
+    }
+
+    String getDataString(String jsonData, String key) {
+        try {
+            JSONObject obj = new JSONObject(jsonData);
+            return obj.getString(key);
+        } catch (JSONException e) {
+            Log.v(LOG_TAG, "Error while reading json, " + key + " set to default value ");
+        }
+        return "";
     }
 
     ArrayList<String> getOutputNames(String jsonData) {
