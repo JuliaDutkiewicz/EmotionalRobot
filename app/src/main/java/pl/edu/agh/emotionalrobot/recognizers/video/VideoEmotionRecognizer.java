@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
 
-    public VideoEmotionRecognizer(Context context, int screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
+    public VideoEmotionRecognizer(Context context, Integer screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
         super(context, screenRotation, cameraManager, model, config);
     }
 
@@ -39,15 +39,5 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
     @Override
     public String getName() {
         return "video";
-    }
-
-    @Override
-    public byte[] getRawData() {
-        return null;
-    }
-
-    @Override
-    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        return null;
     }
 }

@@ -32,8 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Camera {
-    private static final String TAG = "Camera";
+public class Camera2 implements ICamera{
+    private static final String TAG = "Camera2";
 
     private final int screenRotation;
     private final Object semaphore = new Object();
@@ -69,12 +69,12 @@ public class Camera {
         }
     };
 
-    public Camera(Context context, int screenRotation, CameraManager cameraManager) throws Exception {
+    public Camera2(Context context, int screenRotation, CameraManager cameraManager) throws Exception {
         this.applicationContext = context;
         this.screenRotation = screenRotation;
         this.cameraManager = cameraManager;
         openCamera(this.cameraManager);
-        mBackgroundThread = new HandlerThread("Camera Background");
+        mBackgroundThread = new HandlerThread("Camera2 Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
