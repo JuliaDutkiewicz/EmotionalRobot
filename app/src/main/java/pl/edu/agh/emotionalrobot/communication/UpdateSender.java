@@ -37,9 +37,9 @@ public class UpdateSender {
         return this.initialized;
     }
 
-    public boolean sendUpdate(final Date timestamp, final byte[] rawData, final String recognizerName) {
+    public boolean sendUpdate(final Date timestamp, final byte[] rawData, final String recognizerName, final String recognizerType) {
         try {
-            send(Formatter.formatRawData(timestamp, rawData, recognizerName));
+            send(Formatter.formatRawData(timestamp, rawData, recognizerName, recognizerType));
             return true;
         } catch (MqttException | JSONException e) {
             e.printStackTrace();
@@ -52,9 +52,9 @@ public class UpdateSender {
         client.connect(null, callback);
     }
 
-    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData, String recognizerName) {
+    public boolean sendUpdate(final Date timestamp, final Map<String, Float> emotionData, String recognizerName, final String recognizerType) {
         try {
-            send(Formatter.formatEmotionData(timestamp, emotionData, recognizerName));
+            send(Formatter.formatEmotionData(timestamp, emotionData, recognizerName, recognizerType));
             return true;
         } catch (MqttException | JSONException e) {
             e.printStackTrace();
@@ -62,9 +62,9 @@ public class UpdateSender {
         }
     }
 
-    public boolean sendUpdate(final Date timestamp, final Pair<Map<String, Float>, byte[]> emotionWithRawData, String recognizerName) {
+    public boolean sendUpdate(final Date timestamp, final Pair<Map<String, Float>, byte[]> emotionWithRawData, String recognizerName, final String recognizerType) {
         try {
-            send(Formatter.formatEmotionWithRawData(timestamp, emotionWithRawData, recognizerName));
+            send(Formatter.formatEmotionWithRawData(timestamp, emotionWithRawData, recognizerName, recognizerType));
             return true;
         } catch (MqttException | JSONException e) {
             e.printStackTrace();

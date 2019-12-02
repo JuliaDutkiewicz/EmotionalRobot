@@ -12,14 +12,14 @@ import java.util.Locale;
 import java.util.Map;
 
 final class Formatter {
-    static String formatRawData(Date timestamp, byte[] rawData, String recognizerName) throws JSONException {
-        JSONObject update = createBasicUpdateJson(timestamp, recognizerName);
+    static String formatRawData(Date timestamp, byte[] rawData, String recognizerName, String recognizerType) throws JSONException {
+        JSONObject update = createBasicUpdateJson(timestamp, recognizerName,recognizerType);
         addRawDataToUpdate(update, rawData);
         return update.toString();
     }
 
-    static String formatEmotionWithRawData(Date timestamp, Pair<Map<String, Float>, byte[]> emotionWithRawData, String recognizerName) throws JSONException {
-        JSONObject update = createBasicUpdateJson(timestamp, recognizerName);
+    static String formatEmotionWithRawData(Date timestamp, Pair<Map<String, Float>, byte[]> emotionWithRawData, String recognizerName, String recognizerType) throws JSONException {
+        JSONObject update = createBasicUpdateJson(timestamp, recognizerName,recognizerType);
         Map<String, Float> emotionData = emotionWithRawData.first;
         addEmotionDataToUpdate(update, emotionData);
         byte[] rawData=emotionWithRawData.second;
@@ -39,16 +39,17 @@ final class Formatter {
         update.put("emotion_data", emotionDataObject);
     }
 
-    private static JSONObject createBasicUpdateJson(Date timestamp, String recognizerName) throws JSONException {
+    private static JSONObject createBasicUpdateJson(Date timestamp, String recognizerName, String recognizerType) throws JSONException {
         JSONObject update = new JSONObject();
         update.put("network", recognizerName);
+        update.put("type", recognizerType);
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
         update.put("timestamp", format.format(timestamp));
         return update;
     }
 
-    static String formatEmotionData(Date timestamp, final Map<String, Float> emotionData, String recognizerName) throws JSONException {
-        JSONObject update = createBasicUpdateJson(timestamp, recognizerName);
+    static String formatEmotionData(Date timestamp, final Map<String, Float> emotionData, String recognizerName, String recognizerType) throws JSONException {
+        JSONObject update = createBasicUpdateJson(timestamp, recognizerName,recognizerType);
         addEmotionDataToUpdate(update, emotionData);
 
         return update.toString();

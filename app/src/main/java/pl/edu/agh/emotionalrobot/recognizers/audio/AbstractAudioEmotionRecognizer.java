@@ -14,13 +14,12 @@ import javax.annotation.PreDestroy;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognizer {
-    private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
-
     static final String INPUT_BUFFER_SIZE = "INPUT_BUFFER_SIZE";
     static final String OUTPUT_BUFFER_SIZE = "OUTPUT_BUFFER_SIZE";
     static final String SAMPLE_RATE = "SAMPLE_RATE";
     static final String RECORDING_LENGTH = "RECORDING_LENGTH";
     static final String NN_NAME = "NN_NAME";
+    private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
     public abstract short[] getRecordedAudioBuffer();
@@ -67,6 +66,11 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
             Log.v(LOG_TAG, "Error while reading json");
         }
         return outputNames;
+    }
+
+    @Override
+    public String getType() {
+        return "audio";
     }
 
     @PreDestroy
