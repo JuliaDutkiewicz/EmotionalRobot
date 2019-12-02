@@ -5,7 +5,7 @@
     "fear",
     "happy",
     "sad",
-    "suprise",
+    "surprise",
     "neutral"
   ],
   "AUDIO_MODEL": "video_model.tflite"
