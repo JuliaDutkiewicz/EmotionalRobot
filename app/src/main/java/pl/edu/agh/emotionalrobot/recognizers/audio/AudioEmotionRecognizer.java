@@ -105,16 +105,16 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         return floatArray2ByteArray(floatAudioBuffer);
     }
 
-    public static byte[] floatArray2ByteArray(float[] values){
+    public static byte[] floatArray2ByteArray(float[] values) {
         ByteBuffer buffer = ByteBuffer.allocate(4 * values.length);
-        for (float value : values){
+        for (float value : values) {
             buffer.putFloat(value);
         }
         return buffer.array();
     }
 
 
-    public static float[] shortToFloat (short[] shortArray){
+    public static float[] shortToFloat(short[] shortArray) {
         float[] floatOut = new float[shortArray.length];
         for (int i = 0; i < shortArray.length; i++) {
             floatOut[i] = shortArray[i] / 32768.0f;
@@ -142,6 +142,8 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
             int secondCopyLength = recordingOffset;
             System.arraycopy(recordingBuffer, recordingOffset, inputBuffer, 0, firstCopyLength);
             System.arraycopy(recordingBuffer, 0, inputBuffer, firstCopyLength, secondCopyLength);
+        } catch (Exception e) {
+            Log.v(LOG_TAG, "Buffer warning.");
         } finally {
             recordingBufferLock.unlock();
         }
@@ -165,6 +167,8 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
             System.arraycopy(audioBuffer, 0, recordingBuffer, recordingOffset, firstCopyLength);
             System.arraycopy(audioBuffer, firstCopyLength, recordingBuffer, 0, secondCopyLength);
             recordingOffset = newRecordingOffset % maxLength;
+        } catch (Exception e) {
+            Log.v(LOG_TAG, "Buffer warning.");
         } finally {
             recordingBufferLock.unlock();
         }
@@ -234,7 +238,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 // // LibrosaMFCC
         double[] doubleInputBuffer = new double[inputBuffer.length];
         for (int i = 0; i < inputBuffer.length; i++) {
-            doubleInputBuffer[i] = (inputBuffer[i] / 32768.0f );
+            doubleInputBuffer[i] = (inputBuffer[i] / 32768.0f);
         }
         LibrosaMFCC mfccConvert = new LibrosaMFCC();
         return mfccConvert.process(doubleInputBuffer);
