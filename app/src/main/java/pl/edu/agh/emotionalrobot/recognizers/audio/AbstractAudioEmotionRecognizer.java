@@ -9,6 +9,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.annotation.PreDestroy;
+
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognizer {
@@ -25,9 +27,9 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     abstract void initAudioRecord();
 
-    abstract float[] preProcessing(short[] inputBuffer);
+    abstract float[] preProcess(short[] inputBuffer);
 
-    abstract HashMap<String, Float> postProcessing(float[] floats);
+    abstract HashMap<String, Float> postProcess(float[] floats);
 
     int getDataValue(String jsonData, String key) {
         try {
@@ -37,6 +39,16 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
             Log.v(LOG_TAG, "Error while reading json, " + key + " set to default value ");
         }
         return defaultValues.get(key);
+    }
+
+    String getDataString(String jsonData, String key) {
+        try {
+            JSONObject obj = new JSONObject(jsonData);
+            return obj.getString(key);
+        } catch (JSONException e) {
+            Log.v(LOG_TAG, "Error while reading json, " + key + " set to default value ");
+        }
+        return "";
     }
 
     ArrayList<String> getOutputNames(String jsonData) {
@@ -59,4 +71,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     public String getType() {
         return "audio";
     }
+
+    @PreDestroy
+    abstract void stopRecording();
 }

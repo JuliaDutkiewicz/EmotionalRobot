@@ -44,7 +44,7 @@ Please visit http://ocvolume.sourceforge.net.
  * Fast Fourier Transform.
  *
  * last updated on June 15, 2002<br>
- * <b>description:</b> FFT class for real signals. Upon entry, N contains the
+ * <b>description:</b> LibrosaFFT class for real signals. Upon entry, N contains the
  * numbers of points in the DFT, real[] and imaginary[] contain the real and
  * imaginary parts of the input. Upon return, real[] and imaginary[] contain the
  * DFT output. All signals run from 0 to N - 1<br>
@@ -54,7 +54,7 @@ Please visit http://ocvolume.sourceforge.net.
  * @author Danny Su
  * @author Hanns Holger Rutz
  */
-public class FFT {
+public class LibrosaFFT {
     double[] real;
     double[] imag;
 
@@ -67,12 +67,12 @@ public class FFT {
         real = signal;
         imag = new double[numPoints];
 
-        // perform FFT using the real & imag array
+        // perform LibrosaFFT using the real & imag array
         final double pi = Math.PI;
         final int numStages = (int) (Math.log(numPoints) / Math.log(2));
         final int halfNumPoints = numPoints >> 1;
         int j = halfNumPoints;
-        // FFT time domain decomposition carried out by "bit reversal sorting"
+        // LibrosaFFT time domain decomposition carried out by "bit reversal sorting"
         // algorithm
         int k;
         for (int i = 1; i < numPoints - 2; i++) {
