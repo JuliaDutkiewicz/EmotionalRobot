@@ -18,6 +18,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     static final String OUTPUT_BUFFER_SIZE = "OUTPUT_BUFFER_SIZE";
     static final String SAMPLE_RATE = "SAMPLE_RATE";
     static final String RECORDING_LENGTH = "RECORDING_LENGTH";
+    static final String NN_NAME = "NN_NAME";
     private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
