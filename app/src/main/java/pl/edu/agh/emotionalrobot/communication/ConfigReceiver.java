@@ -12,6 +12,8 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import pl.edu.agh.emotionalrobot.EmotionDataGatherer;
 
@@ -19,6 +21,7 @@ public class ConfigReceiver {
     private final EmotionDataGatherer emotionDataGatherer;
     private final Context context;
     private final CommunicationConfig config;
+    private static final String UPDATE_CYCLE_ON = "UPDATE_CYCLE_ON";
     private MqttAndroidClient client;
 
     public ConfigReceiver(Context context, CommunicationConfig config, EmotionDataGatherer emotionDataGatherer) {
@@ -45,7 +48,19 @@ public class ConfigReceiver {
 
             @Override
             public void messageArrived(String topic, MqttMessage message) throws Exception {
-                System.out.println("Message arrived! Topic: "+topic+", message:"+new String(message.getPayload()));
+                JSONObject config = new JSONObject(new String(message.getPayload()));
+                setConfig(config);
+                System.out.println("Message arrived! Topic: " + topic + ", message:" + new String(message.getPayload()));
+            }
+
+            private void setConfig(JSONObject config) throws JSONException {
+                if (config.has(UPDATE_CYCLE_ON)) {
+                    if (Boolean.parseBoolean(config.getString(UPDATE_CYCLE_ON))) {
+                        emotionDataGatherer.startSendingUpdates();
+                    } else {
+                        emotionDataGatherer.stopSendingUpdates();
+                    }
+                }
             }
 
             @Override
@@ -60,7 +75,7 @@ public class ConfigReceiver {
                     client.subscribe(config.CONFIGURATION_TOPIC, 0, null, new IMqttActionListener() {
                         @Override
                         public void onSuccess(IMqttToken asyncActionToken) {
-                            Log.w("Mqtt","Subscribed!");
+                            Log.w("Mqtt", "Subscribed!");
                         }
 
                         @Override
