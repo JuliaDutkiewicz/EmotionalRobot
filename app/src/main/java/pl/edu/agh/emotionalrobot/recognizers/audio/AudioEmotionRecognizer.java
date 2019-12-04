@@ -1,8 +1,5 @@
 package pl.edu.agh.emotionalrobot.recognizers.audio;
 
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
 import android.util.Log;
 import android.util.Pair;
 
@@ -13,9 +10,7 @@ import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 
-import javax.annotation.PreDestroy;
 
 import pl.edu.agh.emotionalrobot.recognizers.audio.utils.LibrosaMFCC;
 import pl.edu.agh.emotionalrobot.recognizers.audio.utils.TarsosMFCC;
@@ -32,23 +27,18 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     // neural network size
     private static final int DEFAULT_INPUT_BUFFER_SIZE = 216;
     private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
-    private final ReentrantLock recordingBufferLock = new ReentrantLock();
     private String nnName;
-    private int sampleRate;
     private int inputBufferSize;
     private int outputBufferSize; // warning: must be equals outputNames.size()
     private int recordingLength;
-    private short[] recordingBuffer;
-    private int recordingOffset = 0;
-    private short[] audioBuffer;
-    private AudioRecord audioRecord;
     private Interpreter interpreter;
     private ArrayList<String> outputNames;
+    private Microphone microphone;
+    private int sampleRate;
 
     public AudioEmotionRecognizer(MappedByteBuffer modelFile, String jsonData) {
         this.interpreter = new Interpreter(modelFile);
         initConfigData(jsonData);
-        initAudioRecord();
     }
 
     @Override
@@ -62,40 +52,23 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         this.inputBufferSize = getDataValue(jsonData, INPUT_BUFFER_SIZE);
         this.outputBufferSize = getDataValue(jsonData, OUTPUT_BUFFER_SIZE);
         this.sampleRate = getDataValue(jsonData, SAMPLE_RATE);
+        this.microphone = new Microphone(sampleRate);
         this.recordingLength = getDataValue(jsonData, RECORDING_LENGTH);
-        this.recordingBuffer = new short[recordingLength];
+        this.microphone.setRecordingBuffer(new short[recordingLength]);
+        this.microphone.initAudioRecord();
     }
 
-    @Override
-    void initAudioRecord() {
-        int bufferSize = getBufferSize();
-        this.audioBuffer = new short[bufferSize / 2];
-        this.audioRecord =
-                new AudioRecord(
-                        MediaRecorder.AudioSource.DEFAULT,
-                        sampleRate,
-                        AudioFormat.CHANNEL_IN_MONO,
-                        AudioFormat.ENCODING_PCM_16BIT,
-                        bufferSize);
-
-        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
-            Log.e(LOG_TAG, "Audio Record can't initialize!");
-            initAudioRecord();
-        }
-
-        audioRecord.startRecording();
-    }
 
     @Override
     public Map<String, Float> getEmotions() {
-        record();
+        microphone.record();
         short[] inputBuffer = getRecordedAudioBuffer();
         return recognize(inputBuffer);
     }
 
     @Override
     public byte[] getRawData() {
-        record();
+        microphone.record();
         short[] audioBuffer = getRecordedAudioBuffer();
         return extractRawData(audioBuffer);
     }
@@ -125,7 +98,7 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
 
     @Override
     public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        record();
+        microphone.record();
         short[] audioBuffer = getRecordedAudioBuffer();
         Map<String, Float> emotions = recognize(audioBuffer);
         byte[] rawData = extractRawData(audioBuffer);
@@ -135,17 +108,17 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
     public short[] getRecordedAudioBuffer() {
         short[] inputBuffer = new short[recordingLength];
 
-        recordingBufferLock.lock();
+        microphone.getRecordingBufferLock().lock();
         try {
-            int maxLength = recordingBuffer.length;
-            int firstCopyLength = maxLength - recordingOffset;
-            int secondCopyLength = recordingOffset;
-            System.arraycopy(recordingBuffer, recordingOffset, inputBuffer, 0, firstCopyLength);
-            System.arraycopy(recordingBuffer, 0, inputBuffer, firstCopyLength, secondCopyLength);
+            int maxLength = microphone.getRecordingBuffer().length;
+            int firstCopyLength = maxLength - microphone.getRecordingOffset();
+            int secondCopyLength = microphone.getRecordingOffset();
+            System.arraycopy(microphone.getRecordingBuffer(), microphone.getRecordingOffset(), inputBuffer, 0, firstCopyLength);
+            System.arraycopy(microphone.getRecordingBuffer(), 0, inputBuffer, firstCopyLength, secondCopyLength);
         } catch (Exception e) {
             Log.v(LOG_TAG, "Buffer warning.");
         } finally {
-            recordingBufferLock.unlock();
+            microphone.getRecordingBufferLock().unlock();
         }
         return inputBuffer;
     }
@@ -155,34 +128,6 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         return nnName;
     }
 
-    private void record() {
-        int numberRead = audioRecord.read(audioBuffer, 0, audioBuffer.length);
-        int maxLength = recordingBuffer.length;
-        int newRecordingOffset = recordingOffset + numberRead;
-        int secondCopyLength = Math.max(0, newRecordingOffset - maxLength);
-        int firstCopyLength = numberRead - secondCopyLength;
-
-        recordingBufferLock.lock();
-        try {
-            System.arraycopy(audioBuffer, 0, recordingBuffer, recordingOffset, firstCopyLength);
-            System.arraycopy(audioBuffer, firstCopyLength, recordingBuffer, 0, secondCopyLength);
-            recordingOffset = newRecordingOffset % maxLength;
-        } catch (Exception e) {
-            Log.v(LOG_TAG, "Buffer warning.");
-        } finally {
-            recordingBufferLock.unlock();
-        }
-    }
-
-    private int getBufferSize() {
-        int bufferSize =
-                AudioRecord.getMinBufferSize(
-                        sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-        if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
-            bufferSize = sampleRate * 2;
-        }
-        return bufferSize;
-    }
 
     private Map<String, Float> recognize(short[] inputBuffer) {
 //      LibrosaMFCC
@@ -254,10 +199,5 @@ public class AudioEmotionRecognizer extends AbstractAudioEmotionRecognizer {
         }
         Log.v(LOG_TAG, resultsText.toString());
         return results;
-    }
-
-    @PreDestroy
-    public void stopRecording() {
-        audioRecord.stop();
     }
 }

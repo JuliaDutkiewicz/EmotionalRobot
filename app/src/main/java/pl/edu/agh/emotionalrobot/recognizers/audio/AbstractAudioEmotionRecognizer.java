@@ -9,7 +9,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.annotation.PreDestroy;
 
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
@@ -19,6 +18,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     static final String SAMPLE_RATE = "SAMPLE_RATE";
     static final String RECORDING_LENGTH = "RECORDING_LENGTH";
     static final String NN_NAME = "NN_NAME";
+
     private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
@@ -26,7 +26,6 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     abstract void initConfigData(String jsonData);
 
-    abstract void initAudioRecord();
 
     abstract float[] preProcess(short[] inputBuffer);
 
@@ -73,6 +72,4 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         return "audio";
     }
 
-    @PreDestroy
-    abstract void stopRecording();
 }
