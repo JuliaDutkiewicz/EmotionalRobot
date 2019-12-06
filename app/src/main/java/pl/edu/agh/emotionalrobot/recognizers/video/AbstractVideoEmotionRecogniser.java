@@ -34,14 +34,13 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     private LinkedList<String> emotionNames;
 
-    public AbstractVideoEmotionRecogniser(Context context, Integer screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
+    public AbstractVideoEmotionRecogniser(Context context, MappedByteBuffer model, String config) throws Exception {
         this.interpreter = new Interpreter(model);
         this.emotionNames = getEmotionNames(config);
         this.faceDetector = new
                 FaceDetector.Builder(context).setTrackingEnabled(false)
                 .build();
-//        this.camera = new Camera2(context, screenRotation, cameraManager);
-        this.camera = new Camera1(context, screenRotation);
+        this.camera = new Camera1();
         this.applicationContext = context;
     }
 
