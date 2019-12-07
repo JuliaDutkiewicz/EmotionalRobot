@@ -41,7 +41,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     private ArrayList<String> outputNames;
     private int sampleRate;
     private Microphone microphone;
-    HashMap<String, Integer> defaultValues = new HashMap<>();
+    private HashMap<String, Integer> defaultValues = new HashMap<>();
 
     public AbstractAudioEmotionRecognizer(MappedByteBuffer modelFile, String jsonData) {
         this.interpreter = new Interpreter(modelFile);
