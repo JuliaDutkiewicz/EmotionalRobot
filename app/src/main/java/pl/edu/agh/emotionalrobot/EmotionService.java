@@ -1,14 +1,11 @@
 package pl.edu.agh.emotionalrobot;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
-import android.hardware.camera2.CameraManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -69,10 +66,7 @@ public class EmotionService extends Service {
             videoModelName = DEFAULT_VIDEO_MODEL_NAME;
         }
         try {
-            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-            WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-            final Integer rotation = window.getDefaultDisplay().getRotation();
-            return new VideoEmotionRecognizer(getApplicationContext(), rotation, manager, loadModelFile(videoModelName), configJson);
+            return new VideoEmotionRecognizer(getApplicationContext(), loadModelFile(videoModelName), configJson);
         } catch (Exception e) {
             Log.v(LOG_TAG, "Error by loading video model. " + e.getMessage());
             throw e;

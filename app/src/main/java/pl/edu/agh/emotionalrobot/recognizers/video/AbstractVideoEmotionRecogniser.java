@@ -2,8 +2,6 @@ package pl.edu.agh.emotionalrobot.recognizers.video;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.hardware.camera2.CameraManager;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -30,19 +28,16 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
     private FaceDetector faceDetector;
     private Interpreter interpreter;
     private ICamera camera;
-    private Context applicationContext;
 
     private LinkedList<String> emotionNames;
 
-    public AbstractVideoEmotionRecogniser(Context context, Integer screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
+    public AbstractVideoEmotionRecogniser(Context context, MappedByteBuffer model, String config) throws Exception {
         this.interpreter = new Interpreter(model);
         this.emotionNames = getEmotionNames(config);
         this.faceDetector = new
                 FaceDetector.Builder(context).setTrackingEnabled(false)
                 .build();
-//        this.camera = new Camera2(context, screenRotation, cameraManager);
-        this.camera = new Camera1(context, screenRotation);
-        this.applicationContext = context;
+        this.camera = new Camera1();
     }
 
     private LinkedList<String> getEmotionNames(String config) {
@@ -89,7 +84,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     private Bitmap getFace(Bitmap bmp) {
         if (!faceDetector.isOperational()) {
-            new AlertDialog.Builder(applicationContext).setMessage("Could not set up the face detector!").show();
+            Log.e("VideoEmotionRecognizer", "Could not set up the face detector!");
             return null;
         }
 
