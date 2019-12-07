@@ -6,14 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
-import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
-
 public class MainActivity extends AppCompatActivity {
-
-    private static final int REQUEST_CAMERA_PERMISSION = 200;
-
-    EmotionDataGatherer emotionDataGatherer;
-    VideoEmotionRecognizer videoEmotionRecognizer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
