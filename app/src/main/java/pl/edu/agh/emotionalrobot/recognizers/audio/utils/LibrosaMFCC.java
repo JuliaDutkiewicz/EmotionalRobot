@@ -1,6 +1,11 @@
 package pl.edu.agh.emotionalrobot.recognizers.audio.utils;
 
 
+/*
+based on librosa MFCC
+ */
+
+
 public class LibrosaMFCC {
 
     // default args

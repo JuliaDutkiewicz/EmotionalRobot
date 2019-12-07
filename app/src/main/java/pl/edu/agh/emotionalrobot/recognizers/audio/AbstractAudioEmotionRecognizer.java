@@ -1,38 +1,70 @@
 package pl.edu.agh.emotionalrobot.recognizers.audio;
 
 import android.util.Log;
+import android.util.Pair;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.tensorflow.lite.Interpreter;
 
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
-import javax.annotation.PreDestroy;
 
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognizer {
-    static final String INPUT_BUFFER_SIZE = "INPUT_BUFFER_SIZE";
-    static final String OUTPUT_BUFFER_SIZE = "OUTPUT_BUFFER_SIZE";
-    static final String SAMPLE_RATE = "SAMPLE_RATE";
-    static final String RECORDING_LENGTH = "RECORDING_LENGTH";
-    static final String NN_NAME = "NN_NAME";
+    private static final String INPUT_BUFFER_SIZE = "INPUT_BUFFER_SIZE";
+    private static final String OUTPUT_BUFFER_SIZE = "OUTPUT_BUFFER_SIZE";
+    private static final String SAMPLE_RATE = "SAMPLE_RATE";
+    private static final String RECORDING_LENGTH = "RECORDING_LENGTH";
+    private static final String NN_NAME = "NN_NAME";
+
     private static final String LOG_TAG = AbstractAudioEmotionRecognizer.class.getSimpleName();
+    private static final int DEFAULT_SAMPLE_RATE = 44100;
+    private static final int DEFAULT_RECORDING_LENGTH = 44100;
+    // minimal buffer length for sample rate 16000 Hz is 1280
+    // minimal buffer length for sample rate 44100 Hz is 3584
+
+    // neural network size
+    private static final int DEFAULT_INPUT_BUFFER_SIZE = 216;
+    private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
+    private String nnName;
+    private int inputBufferSize;
+    private int outputBufferSize; // warning: must be equals outputNames.size()
+    private int recordingLength;
+    private Interpreter interpreter;
+    private ArrayList<String> outputNames;
+    private int sampleRate;
+    private Microphone microphone;
     HashMap<String, Integer> defaultValues = new HashMap<>();
 
-    public abstract short[] getRecordedAudioBuffer();
+    public AbstractAudioEmotionRecognizer(MappedByteBuffer modelFile, String jsonData) {
+        this.interpreter = new Interpreter(modelFile);
+        initConfigData(jsonData);
+    }
 
-    abstract void initConfigData(String jsonData);
+    private void initConfigData(String jsonData) {
+        this.outputNames = getOutputNames(jsonData);
+        this.defaultValues.put(INPUT_BUFFER_SIZE, DEFAULT_INPUT_BUFFER_SIZE);
+        this.defaultValues.put(OUTPUT_BUFFER_SIZE, DEFAULT_OUTPUT_BUFFER_SIZE);
+        this.defaultValues.put(SAMPLE_RATE, DEFAULT_SAMPLE_RATE);
+        this.defaultValues.put(RECORDING_LENGTH, DEFAULT_RECORDING_LENGTH);
+        this.nnName = getDataString(jsonData, NN_NAME);
+        this.inputBufferSize = getDataValue(jsonData, INPUT_BUFFER_SIZE);
+        this.outputBufferSize = getDataValue(jsonData, OUTPUT_BUFFER_SIZE);
+        this.sampleRate = getDataValue(jsonData, SAMPLE_RATE);
+        this.microphone = new Microphone(sampleRate);
+        this.recordingLength = getDataValue(jsonData, RECORDING_LENGTH);
+        this.microphone.setRecordingBuffer(new short[recordingLength]);
+        this.microphone.initAudioRecord();
+    }
 
-    abstract void initAudioRecord();
-
-    abstract float[] preProcess(short[] inputBuffer);
-
-    abstract HashMap<String, Float> postProcess(float[] floats);
-
-    int getDataValue(String jsonData, String key) {
+    private int getDataValue(String jsonData, String key) {
         try {
             JSONObject obj = new JSONObject(jsonData);
             return obj.getInt(key);
@@ -42,7 +74,9 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         return defaultValues.get(key);
     }
 
-    String getDataString(String jsonData, String key) {
+
+
+    private String getDataString(String jsonData, String key) {
         try {
             JSONObject obj = new JSONObject(jsonData);
             return obj.getString(key);
@@ -52,7 +86,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         return "";
     }
 
-    ArrayList<String> getOutputNames(String jsonData) {
+    private ArrayList<String> getOutputNames(String jsonData) {
         ArrayList<String> outputNames = new ArrayList<>();
         try {
             JSONObject obj = new JSONObject(jsonData);
@@ -68,11 +102,119 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         return outputNames;
     }
 
+    abstract float[] preProcess(short[] inputBuffer);
+
+    abstract HashMap<String, Float> postProcess(float[] floats);
+
+    @Override
+    public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
+        microphone.record();
+        short[] audioBuffer = getRecordedAudioBuffer();
+        Map<String, Float> emotions = recognize(audioBuffer);
+        byte[] rawData = extractRawData(audioBuffer);
+        return new Pair<>(emotions, rawData);
+    }
+
+    @Override
+    public Map<String, Float> getEmotions() {
+        microphone.record();
+        short[] inputBuffer = getRecordedAudioBuffer();
+        return recognize(inputBuffer);
+    }
+
+    @Override
+    public byte[] getRawData() {
+        microphone.record();
+        short[] audioBuffer = getRecordedAudioBuffer();
+        return extractRawData(audioBuffer);
+    }
+
+
+    private short[] getRecordedAudioBuffer() {
+        short[] inputBuffer = new short[recordingLength];
+
+        microphone.getRecordingBufferLock().lock();
+        try {
+            int maxLength = microphone.getRecordingBuffer().length;
+            int firstCopyLength = maxLength - microphone.getRecordingOffset();
+            int secondCopyLength = microphone.getRecordingOffset();
+            System.arraycopy(microphone.getRecordingBuffer(), microphone.getRecordingOffset(), inputBuffer, 0, firstCopyLength);
+            System.arraycopy(microphone.getRecordingBuffer(), 0, inputBuffer, firstCopyLength, secondCopyLength);
+        } catch (Exception e) {
+            Log.v(LOG_TAG, "Buffer warning.");
+        } finally {
+            microphone.getRecordingBufferLock().unlock();
+        }
+        return inputBuffer;
+    }
+
+
+    private Map<String, Float> recognize(short[] inputBuffer) {
+//      LibrosaMFCC
+        float[][] outputFull = new float[1][outputBufferSize];
+        for (int j = 0; j < outputBufferSize; j++) {
+            outputFull[0][j] += 0;
+        }
+        float[] mfccInput = preProcess(inputBuffer);
+        int REPEATS_TIMES = (int) mfccInput.length / inputBufferSize;
+        for (int k = 0; k < REPEATS_TIMES; k++) {
+            float[] floatInputBuffer = getRequiredSizeFrame(mfccInput, k);
+            float[][] output = new float[1][outputBufferSize];
+            interpreter.run(floatInputBuffer, output);
+            for (int j = 0; j < outputBufferSize; j++) {
+                outputFull[0][j] += output[0][j];
+            }
+        }
+        for (int j = 0; j < outputBufferSize; j++) {
+            outputFull[0][j] /= REPEATS_TIMES;
+        }
+        return postProcess(outputFull[0]);
+    }
+
+    // process recorded audio to buffer required by neural network
+    private float[] getRequiredSizeFrame(float[] mfccInput, int k) {
+        float[] floatInputBuffer = new float[inputBufferSize];
+        for (int i = 0; i < inputBufferSize; i++) {
+            floatInputBuffer[i] = (float) mfccInput[(i * k + (inputBufferSize)) % mfccInput.length];
+        }
+        return floatInputBuffer;
+    }
+
+    private byte[] extractRawData(short[] audioBuffer) {
+        float[] floatAudioBuffer = shortToFloat(audioBuffer);
+        return floatArray2ByteArray(floatAudioBuffer);
+    }
+
+    private static float[] shortToFloat(short[] shortArray) {
+        float[] floatOut = new float[shortArray.length];
+        for (int i = 0; i < shortArray.length; i++) {
+            floatOut[i] = shortArray[i] / 32768.0f;
+        }
+        return floatOut;
+    }
+
+    private static byte[] floatArray2ByteArray(float[] values) {
+        ByteBuffer buffer = ByteBuffer.allocate(4 * values.length);
+        for (float value : values) {
+            buffer.putFloat(value);
+        }
+        return buffer.array();
+    }
+
     @Override
     public String getType() {
         return "audio";
     }
 
-    @PreDestroy
-    abstract void stopRecording();
+    String getNnName() {
+        return nnName;
+    }
+
+    ArrayList<String> getOutputNames() {
+        return outputNames;
+    }
+
+    int getOutputBufferSize() {
+        return outputBufferSize;
+    }
 }
