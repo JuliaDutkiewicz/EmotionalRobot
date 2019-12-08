@@ -8,8 +8,10 @@ import java.nio.MappedByteBuffer;
 
 public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
 
-    public VideoEmotionRecognizer(Context context, MappedByteBuffer model, String config) throws Exception {
+    String name;
+    public VideoEmotionRecognizer(Context context, MappedByteBuffer model, String config, String name) throws Exception {
         super(context, model, config);
+        this.name = name;
     }
 
     @Override
@@ -34,6 +36,6 @@ public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
 
     @Override
     public String getName() {
-        return "video";
+        return name;
     }
 }

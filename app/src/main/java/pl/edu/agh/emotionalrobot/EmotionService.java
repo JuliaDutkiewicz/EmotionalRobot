@@ -45,7 +45,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
         String audioModelName = null;
         try {
-            audioModelName = getModelName(configJson, "DEFAULT_AUDIO_MODEL_NAME");
+            audioModelName = getFileFromJson(configJson, "DEFAULT_AUDIO_MODEL_NAME");
         } catch (JSONException e) {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
@@ -59,14 +59,20 @@ public class EmotionService extends Service {
 
     private AbstractVideoEmotionRecogniser loadVideoRecognizerFromConfig() throws Exception {
         String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
-        String videoModelName = null;
+        String videoModelFileName;
         try {
-            videoModelName = getModelName(configJson, "DEFAULT_VIDEO_MODEL_NAME");
+            videoModelFileName = getFileFromJson(configJson, "VIDEO_MODEL");
         } catch (JSONException e) {
-            videoModelName = DEFAULT_VIDEO_MODEL_NAME;
+            videoModelFileName = DEFAULT_VIDEO_MODEL_NAME;
+        }
+        String videoRecognizerName;
+        try {
+            videoRecognizerName = getFileFromJson(configJson, "NN_NAME");
+        } catch (JSONException e) {
+            videoRecognizerName = "video";
         }
         try {
-            return new VideoEmotionRecognizer(getApplicationContext(), loadModelFile(videoModelName), configJson);
+            return new VideoEmotionRecognizer(getApplicationContext(), loadModelFile(videoModelFileName), configJson, videoRecognizerName);
         } catch (Exception e) {
             Log.v(LOG_TAG, "Error by loading video model. " + e.getMessage());
             throw e;
@@ -98,10 +104,10 @@ public class EmotionService extends Service {
         return json;
     }
 
-    private String getModelName(String jsonData, String model_key) throws JSONException {
+    private String getFileFromJson(String jsonData, String model_key) throws JSONException {
         try {
             JSONObject obj = new JSONObject(jsonData);
-            return obj.getString("DEFAULT_AUDIO_MODEL_NAME");
+            return obj.getString(model_key);
         } catch (JSONException e) {
             Log.v(LOG_TAG, "Error while reading json, for " + model_key + ".");
             throw e;
