@@ -22,6 +22,8 @@ public class ConfigReceiver {
     private final Context context;
     private final CommunicationConfig config;
     private static final String UPDATE_CYCLE_ON = "UPDATE_CYCLE_ON";
+    private static final String TICK_LENGTH = "TICK_LENGTH";
+    private static final String UPDATE_TYPE = "UPDATE_TYPE";
     private MqttAndroidClient client;
 
     public ConfigReceiver(Context context, CommunicationConfig config, EmotionDataGatherer emotionDataGatherer) {
@@ -49,11 +51,26 @@ public class ConfigReceiver {
             @Override
             public void messageArrived(String topic, MqttMessage message) throws Exception {
                 JSONObject config = new JSONObject(new String(message.getPayload()));
-                setConfig(config);
+                try {
+                    setConfig(config);
+                }catch(Exception e) {
+                    Log.v(this.getClass().getCanonicalName(), "Exception occurred when setting configuration", e);
+                }
                 System.out.println("Message arrived! Topic: " + topic + ", message:" + new String(message.getPayload()));
             }
 
             private void setConfig(JSONObject config) throws JSONException {
+                if(config.has(TICK_LENGTH)) {
+                    emotionDataGatherer.stopSendingUpdates();
+                    emotionDataGatherer.setUpdateInterval(config.getInt(TICK_LENGTH));
+                    emotionDataGatherer.startSendingUpdates();
+                }
+                if(config.has(UPDATE_TYPE)){
+                    UpdateType updateType = config.getString(UPDATE_TYPE).length() == 1
+                            ? UpdateType.values()[config.getInt(UPDATE_TYPE)]
+                            : UpdateType.valueOf(config.getString(UPDATE_TYPE));
+                    emotionDataGatherer.setUpdateType(updateType);
+                }
                 if (config.has(UPDATE_CYCLE_ON)) {
                     if (Boolean.parseBoolean(config.getString(UPDATE_CYCLE_ON))) {
                         emotionDataGatherer.startSendingUpdates();

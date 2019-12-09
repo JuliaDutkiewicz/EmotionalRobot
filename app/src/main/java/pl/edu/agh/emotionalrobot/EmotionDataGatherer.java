@@ -1,5 +1,7 @@
 package pl.edu.agh.emotionalrobot;
 
+import android.util.Log;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.Timer;
@@ -7,6 +9,7 @@ import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import pl.edu.agh.emotionalrobot.communication.UpdateSender;
+import pl.edu.agh.emotionalrobot.communication.UpdateType;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public class EmotionDataGatherer {
@@ -15,11 +18,13 @@ public class EmotionDataGatherer {
     private UpdateSender updateSender;
     private Options options;
     private AtomicBoolean isSendingUpdates = new AtomicBoolean(false);
+    private UpdateType updateType;
 
     public EmotionDataGatherer(Collection<EmotionRecognizer> emotionRecognizers, UpdateSender updateSender, Options options) {
         this.emotionRecognizers = emotionRecognizers;
         this.updateSender = updateSender;
         this.options = options;
+        this.updateType = UpdateType.EMOTIONS_ONLY;
     }
 
     public void startGatheringEmotions(Options options) {
@@ -27,7 +32,7 @@ public class EmotionDataGatherer {
         startSendingUpdates();
     }
 
-    public void startSendingUpdates() {
+    public synchronized void startSendingUpdates() {
         if (isSendingUpdates.get()) {
             return;
         }
@@ -40,16 +45,29 @@ public class EmotionDataGatherer {
         timer.scheduleAtFixedRate(new TimerTask() {
             public void run() {
                 try {
-                    for (EmotionRecognizer recognizer : emotionRecognizers) {
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
-                        updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName());
-                    }
+                    sendUpdate();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.v(this.getClass().getCanonicalName(), "Exception occurred when sending an update", e);
                 }
             }
-        }, 0, options.interval);
+        }, 0, getUpdateInterval());
         isSendingUpdates.set(true);
+    }
+
+    private synchronized void sendUpdate() {
+        for (EmotionRecognizer recognizer : emotionRecognizers) {
+            switch (updateType) {
+                case RAW_ONLY:
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName());
+                    break;
+                case EMOTIONS_ONLY:
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
+                    break;
+                case ALL:
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotionsWithRawData(), recognizer.getName());
+                    break;
+            }
+        }
     }
 
     public void stopSendingUpdates() {
@@ -61,14 +79,20 @@ public class EmotionDataGatherer {
         isSendingUpdates.set(false);
     }
 
-    public void setUpdateInterval(int interval) {
-        // TODO
-        // to stop timer: apparently .cancel() & ev. .purge()
-        // so if message arrives to ConfigReceiver, some sort of method like "reschedule" should be called
+    private synchronized int getUpdateInterval() {
+        return options.interval;
+    }
+
+    public synchronized void setUpdateInterval(int interval) {
+        options.interval = interval;
+    }
+
+    public void setUpdateType(UpdateType updateType) {
+        this.updateType = updateType;
     }
 
     public static class Options {
-        final int interval;
+        int interval;
 
         public Options(int interval) {
             this.interval = interval;
