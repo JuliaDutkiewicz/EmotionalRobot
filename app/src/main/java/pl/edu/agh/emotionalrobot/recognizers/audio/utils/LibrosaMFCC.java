@@ -2,7 +2,7 @@ package pl.edu.agh.emotionalrobot.recognizers.audio.utils;
 
 
 /*
-based on librosa MFCC
+based on librosa MFCC and some java examples of used methods
  */
 
 

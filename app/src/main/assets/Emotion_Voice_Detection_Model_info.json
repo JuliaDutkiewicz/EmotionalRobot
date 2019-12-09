@@ -1,5 +1,5 @@
 {
-  "names": [
+  "EMOTIONS": [
     "female_angry",
     "female_calm",
     "female_fearful",
@@ -11,11 +11,10 @@
     "male_happy",
     "male_sad"
   ],
-  "AUDIO_MODEL": "audio_model.tflite",
+  "MODEL_FILE": "audio_model.tflite",
   "SAMPLE_RATE": 44100,
   "RECORDING_LENGTH": 44100,
   "INPUT_BUFFER_SIZE": 216,
-  "OUTPUT_BUFFER_SIZE": 10,
   "NN_NAME": "Speech-Emotion-Analyzer",
   "source": "https://github.com/MITESHPUTHRANNEU/Speech-Emotion-Analyzer",
   "GROUPED_EMOTIONS": {

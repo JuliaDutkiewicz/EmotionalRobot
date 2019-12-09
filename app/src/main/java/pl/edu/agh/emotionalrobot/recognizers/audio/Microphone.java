@@ -86,6 +86,25 @@ public class Microphone {
         this.recordingBuffer = recordingBuffer;
     }
 
+    short[] getRecordedAudioBuffer(int recordingLength) {
+        record();
+        short[] inputBuffer = new short[recordingLength];
+
+        getRecordingBufferLock().lock();
+        try {
+            int maxLength = getRecordingBuffer().length;
+            int firstCopyLength = maxLength - getRecordingOffset();
+            int secondCopyLength = getRecordingOffset();
+            System.arraycopy(getRecordingBuffer(), getRecordingOffset(), inputBuffer, 0, firstCopyLength);
+            System.arraycopy(getRecordingBuffer(), 0, inputBuffer, firstCopyLength, secondCopyLength);
+        } catch (Exception e) {
+            Log.v(LOG_TAG, "Buffer warning.");
+        } finally {
+            getRecordingBufferLock().unlock();
+        }
+        return inputBuffer;
+    }
+
     @PreDestroy
     public void stopRecording() {
         audioRecord.stop();
