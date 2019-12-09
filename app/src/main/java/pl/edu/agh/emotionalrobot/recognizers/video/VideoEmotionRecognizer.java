@@ -3,17 +3,13 @@ package pl.edu.agh.emotionalrobot.recognizers.video;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.hardware.camera2.CameraManager;
-import android.util.Pair;
 
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.Map;
 
 public class VideoEmotionRecognizer extends AbstractVideoEmotionRecogniser {
 
-    public VideoEmotionRecognizer(Context context, Integer screenRotation, CameraManager cameraManager, MappedByteBuffer model, String config) throws Exception {
-        super(context, screenRotation, cameraManager, model, config);
+    public VideoEmotionRecognizer(Context context, MappedByteBuffer model, String config) throws Exception {
+        super(context, model, config);
     }
 
     @Override

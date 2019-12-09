@@ -1,6 +1,5 @@
 package pl.edu.agh.emotionalrobot.recognizers.video;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
@@ -8,14 +7,14 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.util.Log;
 
+import javax.annotation.PreDestroy;
+
 public class Camera1 implements ICamera {
 
     private static final String TAG = "Camera1";
     private final Object semaphore = new Object();
-    Integer screenRotation;
     private SurfaceTexture surfaceTexture;
     private Camera camera;
-    private Context context;
     private Bitmap currentImage;
     private int cameraId;
     private Camera.PictureCallback pictureCallback = new Camera.PictureCallback() {
@@ -31,15 +30,13 @@ public class Camera1 implements ICamera {
         }
     };
 
-    public Camera1(Context context, Integer screenRotation) throws Exception {
-        this.screenRotation = screenRotation;
+    public Camera1() throws Exception {
         cameraId = findFrontFacingCamera();
         if (cameraId < 0) {
             Log.e(TAG, "No front camera found");
             throw new Exception("No camera found");
 
         }
-        this.context = context;
         try {
             camera = Camera.open(cameraId);
             camera.enableShutterSound(false);
@@ -88,6 +85,12 @@ public class Camera1 implements ICamera {
     private void takePicture() {
         camera.startPreview();
         camera.takePicture(null, null, null, pictureCallback);
+    }
+
+    @PreDestroy
+    public void releaseCamera() {
+        camera.stopPreview();
+        camera.release();
     }
 
 }
