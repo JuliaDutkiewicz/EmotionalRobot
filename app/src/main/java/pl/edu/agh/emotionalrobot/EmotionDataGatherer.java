@@ -58,13 +58,13 @@ public class EmotionDataGatherer {
         for (EmotionRecognizer recognizer : emotionRecognizers) {
             switch (updateType) {
                 case RAW_ONLY:
-                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName());
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getRawData(), recognizer.getName(), recognizer.getType());
                     break;
                 case EMOTIONS_ONLY:
-                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName());
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotions(), recognizer.getName(), recognizer.getType());
                     break;
                 case ALL:
-                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotionsWithRawData(), recognizer.getName());
+                    updateSender.sendUpdate(new Date(System.currentTimeMillis()), recognizer.getEmotionsWithRawData(), recognizer.getName(), recognizer.getType());
                     break;
             }
         }

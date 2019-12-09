@@ -13,7 +13,27 @@
   ],
   "AUDIO_MODEL": "audio_model.tflite",
   "SAMPLE_RATE": 44100,
-  "RECORDING_LENGTH": 44280,
+  "RECORDING_LENGTH": 44100,
   "INPUT_BUFFER_SIZE": 216,
-  "OUTPUT_BUFFER_SIZE": 10
+  "OUTPUT_BUFFER_SIZE": 10,
+  "NN_NAME": "Speech-Emotion-Analyzer",
+  "source": "https://github.com/MITESHPUTHRANNEU/Speech-Emotion-Analyzer",
+  "GROUPED_EMOTIONS": {
+    "positive": [
+      "female_happy",
+      "male_happy"
+    ],
+    "neutral": [
+      "female_calm",
+      "male_calm"
+    ],
+    "negative": [
+      "female_angry",
+      "female_fearful",
+      "male_angry",
+      "male_fearful",
+      "male_sad",
+      "female_sad"
+    ]
+  }
 }
