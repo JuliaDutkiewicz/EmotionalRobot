@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import pl.edu.agh.emotionalrobot.communication.CommunicationConfig;
+import pl.edu.agh.emotionalrobot.communication.ConfigReceiver;
 import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
@@ -128,14 +129,15 @@ public class EmotionService extends Service {
             Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
         }
 
-        emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
         try {
             CommunicationConfig communicationConfig = new CommunicationConfig(loadJSONFromAsset("communication.json"));
-            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
             UpdateSender updateSender = new UpdateSender(getApplicationContext(), communicationConfig);
+            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
+            emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers, updateSender, options);
+            ConfigReceiver configReceiver = new ConfigReceiver(getApplicationContext(), communicationConfig, emotionDataGatherer);
             //TODO put an animation on top of everything
             Log.v(LOG_TAG, "Starting gatherer process. ");
-            emotionDataGatherer.startGatheringEmotions(updateSender, options);
+            emotionDataGatherer.startGatheringEmotions(options);
         } catch (Exception e) {
             Log.v(LOG_TAG, e.getMessage());
             Toast.makeText(getApplicationContext(), "Error while emotion gathering.", Toast.LENGTH_SHORT).show();
