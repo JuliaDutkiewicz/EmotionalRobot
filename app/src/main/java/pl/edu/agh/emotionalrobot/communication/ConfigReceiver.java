@@ -2,6 +2,7 @@ package pl.edu.agh.emotionalrobot.communication;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -14,6 +15,9 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Date;
+import java.util.HashMap;
 
 import pl.edu.agh.emotionalrobot.EmotionDataGatherer;
 
@@ -39,6 +43,7 @@ public class ConfigReceiver {
 
     private void initialize() throws MqttException {
         // start MQTT client with adequate callbacks
+
         String clientId = MqttClient.generateClientId();
         String serverURI = String.format("%s://%s:%s", config.BROKER_PROTOCOL, config.BROKER_IP_OR_NAME, config.BROKER_PORT);
         client = new MqttAndroidClient(context, serverURI, clientId, new MemoryPersistence(), MqttAndroidClient.Ack.AUTO_ACK);
@@ -46,17 +51,21 @@ public class ConfigReceiver {
             @Override
             public void connectionLost(Throwable cause) {
                 Log.v(this.getClass().getCanonicalName(), "connection lost :(");
+                emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),"lost","audio");
             }
 
             @Override
             public void messageArrived(String topic, MqttMessage message) throws Exception {
+                Toast.makeText(context, "Message arrived! Topic: " + topic + ", message:" + new String(message.getPayload()), Toast.LENGTH_LONG).show();
+                emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),"cos","audio");
+                Log.w(this.getClass().getCanonicalName(), "Message arrived! Topic: " + topic + ", message:" + new String(message.getPayload()));
                 JSONObject config = new JSONObject(new String(message.getPayload()));
                 try {
                     setConfig(config);
                 }catch(Exception e) {
                     Log.v(this.getClass().getCanonicalName(), "Exception occurred when setting configuration", e);
                 }
-                System.out.println("Message arrived! Topic: " + topic + ", message:" + new String(message.getPayload()));
+                Toast.makeText(context, "Message arrived moment ago! Topic: " + topic + ", message:" + new String(message.getPayload()), Toast.LENGTH_LONG).show();
             }
 
             private void setConfig(JSONObject config) throws JSONException {
@@ -92,23 +101,29 @@ public class ConfigReceiver {
                     client.subscribe(config.CONFIGURATION_TOPIC, 0, null, new IMqttActionListener() {
                         @Override
                         public void onSuccess(IMqttToken asyncActionToken) {
-                            Log.w("Mqtt", "Subscribed!");
+                            Log.w("Mqtt", "Subscribed! topic: "+config.CONFIGURATION_TOPIC);
+                            emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),"subscribed!","audio");
                         }
 
                         @Override
                         public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                            Log.w("Mqtt", "Subscribed fail!");
+                            emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),"subscribed fail","audio");
+                            Log.d("Mqtt - config", "subscribed fail", exception);
+                            Toast.makeText(context, "Mqtt: " + "Subscribed fail!", Toast.LENGTH_LONG).show();
                         }
                     });
+                    Log.d("config",config.CONFIGURATION_TOPIC);
 
                 } catch (MqttException ex) {
                     ex.printStackTrace();
+                    emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),ex.getMessage(),"audio");
                 }
             }
 
             @Override
             public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                 Log.w(this.getClass().getCanonicalName(), "Failed to connect");
+                emotionDataGatherer.updateSender.sendUpdate(new Date(),new HashMap<String, Float>(),"failed to connect","audio");
             }
         });
     }

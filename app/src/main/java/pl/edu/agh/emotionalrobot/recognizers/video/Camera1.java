@@ -7,6 +7,8 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.util.Log;
 
+import java.io.IOException;
+
 import javax.annotation.PreDestroy;
 
 public class Camera1 implements ICamera {

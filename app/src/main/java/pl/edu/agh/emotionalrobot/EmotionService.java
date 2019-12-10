@@ -135,6 +135,7 @@ public class EmotionService extends Service {
             EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
             emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers, updateSender, options);
             ConfigReceiver configReceiver = new ConfigReceiver(getApplicationContext(), communicationConfig, emotionDataGatherer);
+            emotionDataGatherer.setConfigReceiver(configReceiver);
             //TODO put an animation on top of everything
             Log.v(LOG_TAG, "Starting gatherer process. ");
             emotionDataGatherer.startGatheringEmotions(options);

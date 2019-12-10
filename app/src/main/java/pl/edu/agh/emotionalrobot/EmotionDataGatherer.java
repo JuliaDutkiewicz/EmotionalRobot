@@ -8,6 +8,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import pl.edu.agh.emotionalrobot.communication.ConfigReceiver;
 import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.communication.UpdateType;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
@@ -15,16 +16,17 @@ import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 public class EmotionDataGatherer {
     private Collection<EmotionRecognizer> emotionRecognizers;
     private Timer timer;
-    private UpdateSender updateSender;
+    public UpdateSender updateSender;
     private Options options;
     private AtomicBoolean isSendingUpdates = new AtomicBoolean(false);
     private UpdateType updateType;
+    private ConfigReceiver configReceiver;
 
     public EmotionDataGatherer(Collection<EmotionRecognizer> emotionRecognizers, UpdateSender updateSender, Options options) {
         this.emotionRecognizers = emotionRecognizers;
         this.updateSender = updateSender;
         this.options = options;
-        this.updateType = UpdateType.EMOTIONS_ONLY;
+        this.updateType = UpdateType.ALL;
     }
 
     public void startGatheringEmotions(Options options) {
@@ -89,6 +91,10 @@ public class EmotionDataGatherer {
 
     public void setUpdateType(UpdateType updateType) {
         this.updateType = updateType;
+    }
+
+    public void setConfigReceiver(ConfigReceiver configReceiver) {
+        this.configReceiver=configReceiver;
     }
 
     public static class Options {
