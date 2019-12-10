@@ -27,7 +27,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
     private static final String TAG = "VideoEmotionRecognizer";
     private FaceDetector faceDetector;
     private Interpreter interpreter;
-    private ICamera camera;
+    private Camera1 camera;
 
     private LinkedList<String> emotionNames;
 
@@ -99,8 +99,13 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         float y1 = face.getPosition().y;
         float width = face.getWidth();
         float height = face.getHeight();
-        return Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
-                bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
+        try {
+            return Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
+                    bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
+        }catch (Exception e){
+            Log.e(TAG, "Error while recogising face");
+            return null;
+        }
     }
 
     protected abstract float[][][][] preprocessImage(Bitmap bmp);
@@ -128,5 +133,10 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
     @Override
     public String getType() {
         return "video";
+    }
+
+    @Override
+    public void destroy(){
+        camera.releaseCamera();
     }
 }

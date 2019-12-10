@@ -18,6 +18,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import pl.edu.agh.emotionalrobot.communication.CommunicationConfig;
 import pl.edu.agh.emotionalrobot.communication.ConfigReceiver;
@@ -37,6 +38,7 @@ public class EmotionService extends Service {
     private final IBinder mBinder = new Binder();
     private ArrayList<EmotionRecognizer> emotionRecognizers;
     private EmotionDataGatherer emotionDataGatherer;
+    private AtomicBoolean initializedService = new AtomicBoolean(false);
 
     public EmotionService() {
     }
@@ -115,8 +117,7 @@ public class EmotionService extends Service {
         }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public synchronized void initRecogizers(){
         this.emotionRecognizers = new ArrayList<>();
         try {
             emotionRecognizers.add(loadAudioRecognizerFromConfig());
@@ -129,6 +130,13 @@ public class EmotionService extends Service {
             Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
         }
 
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if(!initializedService.get()){
+            initRecogizers();
+        }
         try {
             CommunicationConfig communicationConfig = new CommunicationConfig(loadJSONFromAsset("communication.json"));
             UpdateSender updateSender = new UpdateSender(getApplicationContext(), communicationConfig);
@@ -149,6 +157,16 @@ public class EmotionService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d("SERVICE", "Service.onDestroy()...");
+        for(EmotionRecognizer er : emotionRecognizers){
+            er.destroy();
+        }
+        super.onDestroy();
+
     }
 
 }
