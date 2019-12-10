@@ -73,7 +73,7 @@ public class Camera1 implements ICamera {
         t.start();
         synchronized (semaphore) {
             try {
-                semaphore.wait();
+                semaphore.wait(3000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

@@ -25,10 +25,9 @@ import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 
 public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognizer {
     private static final String TAG = "VideoEmotionRecognizer";
+    private final Camera1 camera;
     private FaceDetector faceDetector;
     private Interpreter interpreter;
-    private Camera1 camera;
-
     private LinkedList<String> emotionNames;
 
     public AbstractVideoEmotionRecogniser(Context context, MappedByteBuffer model, String config) throws Exception {
@@ -58,10 +57,12 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     @Override
     public Map<String, Float> getEmotions() {
-        Bitmap image = camera.getPicture();
-        Map<String, Float> emotions = getEmotionMap(image);
-        Log.i("VideoEmotionRecognizer", emotions.toString());
-        return emotions;
+        synchronized (camera) {
+            Bitmap image = camera.getPicture();
+            Map<String, Float> emotions = getEmotionMap(image);
+            Log.i("VideoEmotionRecognizer", emotions.toString());
+            return emotions;
+        }
     }
 
     private Map<String, Float> getEmotionMap(Bitmap image) {
@@ -102,7 +103,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
         try {
             return Bitmap.createBitmap(bmp, (int) x1, (int) y1, Math.min((int) width,
                     bmp.getWidth() - (int) x1), Math.min((int) height, bmp.getHeight() - (int) y1));
-        }catch (Exception e){
+        } catch (Exception e) {
             Log.e(TAG, "Error while recogising face");
             return null;
         }
@@ -112,8 +113,10 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     @Override
     public byte[] getRawData() {
-        Bitmap image = camera.getPicture();
-        return getBytesFromBitmap(image);
+        synchronized (camera) {
+            Bitmap image = camera.getPicture();
+            return getBytesFromBitmap(image);
+        }
     }
 
     private byte[] getBytesFromBitmap(Bitmap image) {
@@ -124,10 +127,12 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
 
     @Override
     public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        Bitmap image = camera.getPicture();
-        Map<String, Float> emotions = getEmotionMap(image);
-        byte[] rawData = getBytesFromBitmap(image);
-        return new Pair<>(emotions, rawData);
+        synchronized (camera) {
+            Bitmap image = camera.getPicture();
+            Map<String, Float> emotions = getEmotionMap(image);
+            byte[] rawData = getBytesFromBitmap(image);
+            return new Pair<>(emotions, rawData);
+        }
     }
 
     @Override
@@ -136,7 +141,7 @@ public abstract class AbstractVideoEmotionRecogniser implements EmotionRecognize
     }
 
     @Override
-    public void destroy(){
+    public void destroy() {
         camera.releaseCamera();
     }
 }
