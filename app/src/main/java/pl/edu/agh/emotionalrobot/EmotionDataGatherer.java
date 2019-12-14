@@ -70,7 +70,7 @@ public class EmotionDataGatherer {
         }
     }
 
-    public void stopSendingUpdates() {
+    public synchronized void stopSendingUpdates() {
         if (!isSendingUpdates.get() || timer == null) {
             return;
         }
@@ -87,7 +87,7 @@ public class EmotionDataGatherer {
         options.interval = interval;
     }
 
-    public void setUpdateType(UpdateType updateType) {
+    public synchronized void setUpdateType(UpdateType updateType) {
         this.updateType = updateType;
     }
 

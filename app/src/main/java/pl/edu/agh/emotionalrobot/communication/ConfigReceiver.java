@@ -50,6 +50,7 @@ public class ConfigReceiver {
 
             @Override
             public void messageArrived(String topic, MqttMessage message) throws Exception {
+                System.out.println("Message arrived" + message.toString());
                 JSONObject config = new JSONObject(new String(message.getPayload()));
                 try {
                     setConfig(config);
@@ -69,7 +70,9 @@ public class ConfigReceiver {
                     UpdateType updateType = config.getString(UPDATE_TYPE).length() == 1
                             ? UpdateType.values()[config.getInt(UPDATE_TYPE)]
                             : UpdateType.valueOf(config.getString(UPDATE_TYPE));
+                    emotionDataGatherer.stopSendingUpdates();
                     emotionDataGatherer.setUpdateType(updateType);
+                    emotionDataGatherer.startSendingUpdates();
                 }
                 if (config.has(UPDATE_CYCLE_ON)) {
                     if (Boolean.parseBoolean(config.getString(UPDATE_CYCLE_ON))) {
