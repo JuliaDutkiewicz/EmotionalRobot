@@ -40,7 +40,7 @@ public class AbstractVideoEmotionRecogniserTest {
             "  ],\n" +
             "  \"AUDIO_MODEL\": \"video_model.tflite\"\n" +
             "}";
-    private VideoEmotionRecognizer videoEmotionRecognizer = new VideoEmotionRecognizer(InstrumentationRegistry.getTargetContext(), model, json);
+    private VideoEmotionRecognizer videoEmotionRecognizer = new VideoEmotionRecognizer(InstrumentationRegistry.getTargetContext(), model, json, "NN");
 
 
     public AbstractVideoEmotionRecogniserTest() throws Exception {

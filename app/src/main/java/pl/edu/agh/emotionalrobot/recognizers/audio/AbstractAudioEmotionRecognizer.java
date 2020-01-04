@@ -32,7 +32,6 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     // neural network size
     private static final int DEFAULT_INPUT_BUFFER_SIZE = 216;
-    private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 10; // warning: must be equals outputNames.size()
     private String nnName;
     private int inputBufferSize;
     private int outputBufferSize; // warning: must be equals outputNames.size()
@@ -41,7 +40,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     private ArrayList<String> outputNames;
     private int sampleRate;
     private Microphone microphone;
-    HashMap<String, Integer> defaultValues = new HashMap<>();
+    private HashMap<String, Integer> defaultValues = new HashMap<>();
 
     public AbstractAudioEmotionRecognizer(MappedByteBuffer modelFile, String jsonData) {
         this.interpreter = new Interpreter(modelFile);
@@ -51,12 +50,12 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     private void initConfigData(String jsonData) {
         this.outputNames = getOutputNames(jsonData);
         this.defaultValues.put(INPUT_BUFFER_SIZE, DEFAULT_INPUT_BUFFER_SIZE);
-        this.defaultValues.put(OUTPUT_BUFFER_SIZE, DEFAULT_OUTPUT_BUFFER_SIZE);
+        this.defaultValues.put(OUTPUT_BUFFER_SIZE, this.outputNames.size());
         this.defaultValues.put(SAMPLE_RATE, DEFAULT_SAMPLE_RATE);
         this.defaultValues.put(RECORDING_LENGTH, DEFAULT_RECORDING_LENGTH);
         this.nnName = getDataString(jsonData, NN_NAME);
         this.inputBufferSize = getDataValue(jsonData, INPUT_BUFFER_SIZE);
-        this.outputBufferSize = getDataValue(jsonData, OUTPUT_BUFFER_SIZE);
+        this.outputBufferSize = outputNames.size();
         this.sampleRate = getDataValue(jsonData, SAMPLE_RATE);
         this.microphone = new Microphone(sampleRate);
         this.recordingLength = getDataValue(jsonData, RECORDING_LENGTH);
@@ -90,7 +89,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
         ArrayList<String> outputNames = new ArrayList<>();
         try {
             JSONObject obj = new JSONObject(jsonData);
-            JSONArray names = obj.getJSONArray("names");
+            JSONArray names = obj.getJSONArray("EMOTIONS");
 
             for (int i = 0; i < names.length(); i++) {
                 String name = names.getString(i);
@@ -108,8 +107,7 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     @Override
     public Pair<Map<String, Float>, byte[]> getEmotionsWithRawData() {
-        microphone.record();
-        short[] audioBuffer = getRecordedAudioBuffer();
+        short[] audioBuffer = microphone.getRecordedAudioBuffer(recordingLength);
         Map<String, Float> emotions = recognize(audioBuffer);
         byte[] rawData = extractRawData(audioBuffer);
         return new Pair<>(emotions, rawData);
@@ -117,35 +115,14 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
 
     @Override
     public Map<String, Float> getEmotions() {
-        microphone.record();
-        short[] inputBuffer = getRecordedAudioBuffer();
+        short[] inputBuffer = microphone.getRecordedAudioBuffer(recordingLength);
         return recognize(inputBuffer);
     }
 
     @Override
     public byte[] getRawData() {
-        microphone.record();
-        short[] audioBuffer = getRecordedAudioBuffer();
+        short[] audioBuffer = microphone.getRecordedAudioBuffer(recordingLength);
         return extractRawData(audioBuffer);
-    }
-
-
-    private short[] getRecordedAudioBuffer() {
-        short[] inputBuffer = new short[recordingLength];
-
-        microphone.getRecordingBufferLock().lock();
-        try {
-            int maxLength = microphone.getRecordingBuffer().length;
-            int firstCopyLength = maxLength - microphone.getRecordingOffset();
-            int secondCopyLength = microphone.getRecordingOffset();
-            System.arraycopy(microphone.getRecordingBuffer(), microphone.getRecordingOffset(), inputBuffer, 0, firstCopyLength);
-            System.arraycopy(microphone.getRecordingBuffer(), 0, inputBuffer, firstCopyLength, secondCopyLength);
-        } catch (Exception e) {
-            Log.v(LOG_TAG, "Buffer warning.");
-        } finally {
-            microphone.getRecordingBufferLock().unlock();
-        }
-        return inputBuffer;
     }
 
 

@@ -31,7 +31,7 @@ import pl.edu.agh.emotionalrobot.recognizers.video.VideoEmotionRecognizer;
 
 public class EmotionService extends Service {
     private static final String DEFAULT_AUDIO_MODEL_NAME = "audio_model.tflite";
-    private static final String AUDIO_CONFIG_FILE = "audio.json";
+    private static final String AUDIO_CONFIG_FILE = "Emotion_Voice_Detection_Model_info.json";
     private static final String DEFAULT_VIDEO_MODEL_NAME = "video_model.tflite";
     private static final String VIDEO_CONFIG_FILE = "video.json";
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
@@ -48,7 +48,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
         String audioModelName = null;
         try {
-            audioModelName = getFileFromJson(configJson, "DEFAULT_AUDIO_MODEL_NAME");
+            audioModelName = getFileFromJson(configJson, "MODEL_FILE");
         } catch (JSONException e) {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
@@ -64,7 +64,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
         String videoModelFileName;
         try {
-            videoModelFileName = getFileFromJson(configJson, "VIDEO_MODEL");
+            videoModelFileName = getFileFromJson(configJson, "MODEL_FILE");
         } catch (JSONException e) {
             videoModelFileName = DEFAULT_VIDEO_MODEL_NAME;
         }
