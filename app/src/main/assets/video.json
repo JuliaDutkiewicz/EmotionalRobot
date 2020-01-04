@@ -8,5 +8,6 @@
     "surprise",
     "neutral"
   ],
-  "VIDEO_MODEL": "video_model.tflite"
+  "VIDEO_MODEL": "video_model.tflite",
+  "NN_NAME": "Real time CNN for Emotion Classification"
 }

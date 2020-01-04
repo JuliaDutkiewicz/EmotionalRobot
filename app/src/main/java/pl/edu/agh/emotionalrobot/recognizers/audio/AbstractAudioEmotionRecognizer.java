@@ -194,4 +194,9 @@ public abstract class AbstractAudioEmotionRecognizer implements EmotionRecognize
     int getOutputBufferSize() {
         return outputBufferSize;
     }
+
+    @Override
+    public void destroy(){
+
+    }
 }

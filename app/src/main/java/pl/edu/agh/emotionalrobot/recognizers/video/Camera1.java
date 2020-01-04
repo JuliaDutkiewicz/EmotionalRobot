@@ -7,7 +7,6 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.util.Log;
 
-import javax.annotation.PreDestroy;
 
 public class Camera1 implements ICamera {
 
@@ -74,7 +73,7 @@ public class Camera1 implements ICamera {
         t.start();
         synchronized (semaphore) {
             try {
-                semaphore.wait();
+                semaphore.wait(3000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -87,8 +86,8 @@ public class Camera1 implements ICamera {
         camera.takePicture(null, null, null, pictureCallback);
     }
 
-    @PreDestroy
     public void releaseCamera() {
+        Log.d("CAMERA", "release camera");
         camera.stopPreview();
         camera.release();
     }

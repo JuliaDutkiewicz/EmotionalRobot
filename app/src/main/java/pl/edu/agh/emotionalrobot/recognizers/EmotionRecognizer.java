@@ -14,4 +14,6 @@ public interface EmotionRecognizer {
     Pair<Map<String, Float>, byte[]> getEmotionsWithRawData();
 
     String getType();
+
+    public void destroy();
 }

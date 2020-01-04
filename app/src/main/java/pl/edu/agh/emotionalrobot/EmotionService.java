@@ -18,8 +18,10 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import pl.edu.agh.emotionalrobot.communication.CommunicationConfig;
+import pl.edu.agh.emotionalrobot.communication.ConfigReceiver;
 import pl.edu.agh.emotionalrobot.communication.UpdateSender;
 import pl.edu.agh.emotionalrobot.recognizers.EmotionRecognizer;
 import pl.edu.agh.emotionalrobot.recognizers.audio.AbstractAudioEmotionRecognizer;
@@ -36,6 +38,7 @@ public class EmotionService extends Service {
     private final IBinder mBinder = new Binder();
     private ArrayList<EmotionRecognizer> emotionRecognizers;
     private EmotionDataGatherer emotionDataGatherer;
+    private AtomicBoolean initializedService = new AtomicBoolean(false);
 
     public EmotionService() {
     }
@@ -45,7 +48,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
         String audioModelName = null;
         try {
-            audioModelName = getModelName(configJson, "NN_NAME");
+            audioModelName = getFileFromJson(configJson, "NN_NAME");
         } catch (JSONException e) {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
@@ -59,14 +62,20 @@ public class EmotionService extends Service {
 
     private AbstractVideoEmotionRecogniser loadVideoRecognizerFromConfig() throws Exception {
         String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
-        String videoModelName = null;
+        String videoModelFileName;
         try {
-            videoModelName = getModelName(configJson, "DEFAULT_VIDEO_MODEL_NAME");
+            videoModelFileName = getFileFromJson(configJson, "VIDEO_MODEL");
         } catch (JSONException e) {
-            videoModelName = DEFAULT_VIDEO_MODEL_NAME;
+            videoModelFileName = DEFAULT_VIDEO_MODEL_NAME;
+        }
+        String videoRecognizerName;
+        try {
+            videoRecognizerName = getFileFromJson(configJson, "NN_NAME");
+        } catch (JSONException e) {
+            videoRecognizerName = "video";
         }
         try {
-            return new VideoEmotionRecognizer(getApplicationContext(), loadModelFile(videoModelName), configJson);
+            return new VideoEmotionRecognizer(getApplicationContext(), loadModelFile(videoModelFileName), configJson, videoRecognizerName);
         } catch (Exception e) {
             Log.v(LOG_TAG, "Error by loading video model. " + e.getMessage());
             throw e;
@@ -98,18 +107,17 @@ public class EmotionService extends Service {
         return json;
     }
 
-    private String getModelName(String jsonData, String model_key) throws JSONException {
+    private String getFileFromJson(String jsonData, String model_key) throws JSONException {
         try {
             JSONObject obj = new JSONObject(jsonData);
-            return obj.getString("MODEL_FILE");
+            return obj.getString(model_key);
         } catch (JSONException e) {
             Log.v(LOG_TAG, "Error while reading json, for " + model_key + ".");
             throw e;
         }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public synchronized void initRecogizers(){
         this.emotionRecognizers = new ArrayList<>();
         try {
             emotionRecognizers.add(loadAudioRecognizerFromConfig());
@@ -122,14 +130,22 @@ public class EmotionService extends Service {
             Log.e(LOG_TAG, "Couldn't add AbstractVideoEmotionRecognizer to EmotionDataGatherer");
         }
 
-        emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if(!initializedService.get()){
+            initRecogizers();
+        }
         try {
             CommunicationConfig communicationConfig = new CommunicationConfig(loadJSONFromAsset("communication.json"));
-            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
             UpdateSender updateSender = new UpdateSender(getApplicationContext(), communicationConfig);
+            EmotionDataGatherer.Options options = new EmotionDataGatherer.Options(communicationConfig.STARTING_UPDATE_INTERVAL);
+            emotionDataGatherer = new EmotionDataGatherer(emotionRecognizers, updateSender, options);
+            ConfigReceiver configReceiver = new ConfigReceiver(getApplicationContext(), communicationConfig, emotionDataGatherer);
             //TODO put an animation on top of everything
             Log.v(LOG_TAG, "Starting gatherer process. ");
-            emotionDataGatherer.startGatheringEmotions(updateSender, options);
+            emotionDataGatherer.startGatheringEmotions(options);
         } catch (Exception e) {
             Log.v(LOG_TAG, e.getMessage());
             Toast.makeText(getApplicationContext(), "Error while emotion gathering.", Toast.LENGTH_SHORT).show();
@@ -141,6 +157,16 @@ public class EmotionService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d("SERVICE", "Service.onDestroy()...");
+        for(EmotionRecognizer er : emotionRecognizers){
+            er.destroy();
+        }
+        super.onDestroy();
+
     }
 
 }
