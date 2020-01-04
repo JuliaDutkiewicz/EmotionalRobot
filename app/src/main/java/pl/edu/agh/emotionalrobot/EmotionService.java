@@ -48,7 +48,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(AUDIO_CONFIG_FILE);
         String audioModelName = null;
         try {
-            audioModelName = getFileFromJson(configJson, "NN_NAME");
+            audioModelName = getFileFromJson(configJson, "MODEL_FILE");
         } catch (JSONException e) {
             audioModelName = DEFAULT_AUDIO_MODEL_NAME;
         }
@@ -64,7 +64,7 @@ public class EmotionService extends Service {
         String configJson = loadJSONFromAsset(VIDEO_CONFIG_FILE);
         String videoModelFileName;
         try {
-            videoModelFileName = getFileFromJson(configJson, "VIDEO_MODEL");
+            videoModelFileName = getFileFromJson(configJson, "MODEL_FILE");
         } catch (JSONException e) {
             videoModelFileName = DEFAULT_VIDEO_MODEL_NAME;
         }
